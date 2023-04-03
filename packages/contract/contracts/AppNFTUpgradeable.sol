@@ -26,7 +26,8 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
 
     CountersUpgradeable.Counter private _tokenIdCounter;
     event AppNameSet(address indexed owner, uint256 indexed tokenId, string appName, string uri);
-    event PriceSet(uint256 indexed tokenId, uint256 price);
+    event SaleCreated(uint256 indexed tokenId, uint256 price);
+    event UpdatedTokenURI(uint256 indexed tokenId, string uri);
     
     uint128 public fees;    // fees in Gwei
     // flag to prevent specific app name length
@@ -69,7 +70,7 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
         _unpause();
     }
 
-    function safeMint(address to, string memory uri, string calldata appName) public onlyOwner {
+    function safeMint(address to, string memory uri, string calldata appName) external onlyOwner {
         if(!mintManyFlag){
             require(balanceOf(to)==0, "provided wallet already used to create app");
         }
@@ -86,7 +87,7 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
         emit AppNameSet(to, tokenId, validatedAppName, uri);
     }
 
-    function safeMintAppNFT(address to, string memory uri, string calldata appName) public whenNotPaused {
+    function safeMintAppNFT(address to, string memory uri, string calldata appName) external whenNotPaused {
         if(!mintManyFlag){
             require(balanceOf(to)==0, "provided wallet already used to create app");
         }
@@ -111,7 +112,7 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
 
         priceOf[_tokenID] = _amount;
         onSale[_tokenID] = true;
-        emit PriceSet(_tokenID, _amount);
+        emit SaleCreated(_tokenID, _amount);
     }
 
     function endSale(uint256 _tokenID) external {
@@ -139,6 +140,16 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
     }
     function setCheckDappNamesListFlag(bool _checkDappNamesListFlag) external onlyOwner {
         checkDappNamesListFlag = _checkDappNamesListFlag;
+    }
+
+    function setFees(uint128 _fees) external onlyOwner {
+        fees = _fees;
+    }
+
+    function updateTokenURI(uint256 _tokenId, string memory _tokenURI) external {
+        require(_isApprovedOrOwner(msg.sender, _tokenId), "ERC721: caller is not owner nor approved");
+        _setTokenURI(_tokenId, _tokenURI);
+        emit UpdatedTokenURI(_tokenId, _tokenURI);
     }
 
     function feesWithdraw(address payable _to) external onlyOwner{
