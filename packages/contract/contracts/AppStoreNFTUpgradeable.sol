@@ -22,6 +22,7 @@ contract AppStoreNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enume
 
     CountersUpgradeable.Counter private _tokenIdCounter;
     event AppStoreNameSet(address indexed owner, uint256 indexed tokenId, string appStoreName, string uri);
+    event UpdatedTokenURI(uint256 indexed tokenId, string uri);
 
     // mapping to store blocked apps for each appStore ex isBlocked[appStoreTokenId][appTokenId]
     mapping(uint256 => mapping(uint256 => bool)) public isBlocked;
@@ -71,6 +72,12 @@ contract AppStoreNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enume
         string memory validatedAppStoreName = _validateAppStoreName(appStoreName);
         _setTokensAppStoreName(tokenId, validatedAppStoreName);
         emit AppStoreNameSet(to, tokenId, validatedAppStoreName, uri);
+    }
+
+    function updateTokenURI(uint256 _tokenId, string memory _tokenURI) external {
+        require(_isApprovedOrOwner(msg.sender, _tokenId), "ERC721: caller is not owner nor approved");
+        _setTokenURI(_tokenId, _tokenURI);
+        emit UpdatedTokenURI(_tokenId, _tokenURI);
     }
 
     function blockApp(uint256 _appStoreTokenId, uint256 _appTokenId) external {
