@@ -24,6 +24,11 @@ contract DevNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
     event DevNameSet(address indexed owner, uint256 indexed tokenId, string devName, string uri);
     event UpdatedTokenURI(uint256 indexed tokenId, string uri);
 
+
+    //string variable for storing the schema URI
+    string public schemaURI;
+
+
     /// @custom:oz-upgrades-unsafe-allow constructor    
     constructor() {
         _disableInitializers();
@@ -72,15 +77,19 @@ contract DevNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
         emit DevNameSet(to, tokenId, validatedDevName, uri);
     }
 
-    function feesWithdraw(address payable _to) external onlyOwner{
-        uint256 amount = (address(this)).balance;
-        require(_to.send(amount), 'Fee Transfer to Owner failed.');
-    }
-
     function updateTokenURI(uint256 _tokenId, string memory _tokenURI) external {
         require(_isApprovedOrOwner(msg.sender, _tokenId), "ERC721: caller is not owner nor approved");
         _setTokenURI(_tokenId, _tokenURI);
         emit UpdatedTokenURI(_tokenId, _tokenURI);
+    }
+
+    function setSchemaURI(string memory _schemaURI) external onlyOwner {
+        schemaURI = _schemaURI;
+    }
+
+    function feesWithdraw(address payable _to) external onlyOwner{
+        uint256 amount = (address(this)).balance;
+        require(_to.send(amount), 'Fee Transfer to Owner failed.');
     }
 
     function _beforeTokenTransfer(address from, address to, uint256 tokenId, uint256 batchSize)

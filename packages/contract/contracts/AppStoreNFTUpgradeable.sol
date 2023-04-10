@@ -80,6 +80,14 @@ contract AppStoreNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enume
         emit UpdatedTokenURI(_tokenId, _tokenURI);
     }
 
+    function getDataURI(uint256 _tokenId) external view returns (string memory) {
+        return string(abi.encodePacked(tokenURI(_tokenId), "/data.json"));
+    }
+
+    function getSchemaURI(uint256 _tokenId) external view returns (string memory) {
+        return string(abi.encodePacked(tokenURI(_tokenId), "/schema.json"));
+    }
+
     function blockApp(uint256 _appStoreTokenId, uint256 _appTokenId) external {
         require(_isApprovedOrOwner(msg.sender, _appStoreTokenId), "ERC721: function caller is not owner nor approved");
         isBlocked[_appStoreTokenId][_appTokenId] = true;

@@ -14,6 +14,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
+import "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 
 interface IDappNameList {
     function isAppNameAvailable(string memory appName) external view returns (bool);
@@ -34,12 +35,15 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
     bool public mintSpecialFlag;
     bool public mintManyFlag;
     bool public checkDappNamesListFlag;
+
     mapping(uint256 => uint256) public priceOf;
     mapping(uint256 => bool) public onSale;
 
-
     IERC721Upgradeable public devNFTAddress;
     IDappNameList public dappNameListAddress;
+
+    //string variable for storing the schema URI
+    string public schemaURI;
 
     /// @custom:oz-upgrades-unsafe-allow constructor    
     constructor() {
@@ -152,6 +156,10 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
         emit UpdatedTokenURI(_tokenId, _tokenURI);
     }
 
+    function setSchemaURI(string memory _schemaURI) external onlyOwner {
+        schemaURI = _schemaURI;
+    }
+
     function feesWithdraw(address payable _to) external onlyOwner{
         uint256 amount = (address(this)).balance;
         require(_to.send(amount), 'Fee Transfer to Owner failed.');
@@ -197,4 +205,6 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
     {
         return super.supportsInterface(interfaceId);
     }
+
+
 }
