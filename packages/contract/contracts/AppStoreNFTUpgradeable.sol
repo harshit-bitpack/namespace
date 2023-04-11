@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "./ERC721DevStorageUpgradeable.sol";
+import "./ERC721AppStoreStorageUpgradeable.sol";
 
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
@@ -15,33 +15,30 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 
-contract DevNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradeable, 
+contract AppStoreNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradeable, 
                     ERC721URIStorageUpgradeable, PausableUpgradeable, OwnableUpgradeable, 
-                        ERC721BurnableUpgradeable, UUPSUpgradeable, ERC721DevStorageUpgradeable {
+                        ERC721BurnableUpgradeable, UUPSUpgradeable, ERC721AppStoreStorageUpgradeable {
     using CountersUpgradeable for CountersUpgradeable.Counter;
 
     CountersUpgradeable.Counter private _tokenIdCounter;
-    event DevNameSet(address indexed owner, uint256 indexed tokenId, string devName, string uri);
+    event AppStoreNameSet(address indexed owner, uint256 indexed tokenId, string appStoreName, string uri);
     event UpdatedTokenURI(uint256 indexed tokenId, string uri);
 
-
-    //string variable for storing the schema URI
-    string public schemaURI;
-
-
+    // mapping to store blocked apps for each appStore ex isBlocked[appStoreTokenId][appTokenId]
+    mapping(uint256 => mapping(uint256 => bool)) public isBlocked;
     /// @custom:oz-upgrades-unsafe-allow constructor    
     constructor() {
         _disableInitializers();
     }
     function initialize() initializer public {
-        __ERC721_init("devNFT", "devNFT");
+        __ERC721_init(".appStoreNFT", ".appStoreNFT");
         __ERC721Enumerable_init();
         __ERC721URIStorage_init();
         __Pausable_init();
         __Ownable_init();
         __ERC721Burnable_init();
         __UUPSUpgradeable_init();
-        __ERC721DevStorage_init();
+        __ERC721AppStoreStorage_init();
 
 
         _tokenIdCounter.increment();
@@ -55,26 +52,26 @@ contract DevNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
         _unpause();
     }
 
-    function safeMint(address to, string memory uri, string calldata devName) external onlyOwner {
+    function safeMint(address to, string memory uri, string calldata appStoreName) external onlyOwner {
         require(balanceOf(to)==0, "provided wallet already used to create app");
         uint256 tokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
         _safeMint(to, tokenId);
         _setTokenURI(tokenId, uri);
-        string memory validatedDevName = _validateDevName(devName);
-        _setTokensDevName(tokenId, validatedDevName);
-        emit DevNameSet(to, tokenId, validatedDevName, uri);
+        string memory validatedAppStoreName = _validateAppStoreName(appStoreName);
+        _setTokensAppStoreName(tokenId, validatedAppStoreName);
+        emit AppStoreNameSet(to, tokenId, validatedAppStoreName, uri);
     }
 
-    function safeMintDevNFT(address to, string memory uri, string calldata devName) external whenNotPaused {
+    function safeMintAppStoreNFT(address to, string memory uri, string calldata appStoreName) external whenNotPaused {
         require(balanceOf(to)==0, "provided wallet already used to create app");
         uint256 tokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
         _safeMint(to, tokenId);
         _setTokenURI(tokenId, uri);
-        string memory validatedDevName = _validateDevName(devName);
-        _setTokensDevName(tokenId, validatedDevName);
-        emit DevNameSet(to, tokenId, validatedDevName, uri);
+        string memory validatedAppStoreName = _validateAppStoreName(appStoreName);
+        _setTokensAppStoreName(tokenId, validatedAppStoreName);
+        emit AppStoreNameSet(to, tokenId, validatedAppStoreName, uri);
     }
 
     function updateTokenURI(uint256 _tokenId, string memory _tokenURI) external {
@@ -83,8 +80,17 @@ contract DevNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
         emit UpdatedTokenURI(_tokenId, _tokenURI);
     }
 
-    function setSchemaURI(string memory _schemaURI) external onlyOwner {
-        schemaURI = _schemaURI;
+    function getDataURI(uint256 _tokenId) external view returns (string memory) {
+        return string(abi.encodePacked(tokenURI(_tokenId), "/data.json"));
+    }
+
+    function getSchemaURI(uint256 _tokenId) external view returns (string memory) {
+        return string(abi.encodePacked(tokenURI(_tokenId), "/schema.json"));
+    }
+
+    function blockApp(uint256 _appStoreTokenId, uint256 _appTokenId) external {
+        require(_isApprovedOrOwner(msg.sender, _appStoreTokenId), "ERC721: function caller is not owner nor approved");
+        isBlocked[_appStoreTokenId][_appTokenId] = true;
     }
 
     function feesWithdraw(address payable _to) external onlyOwner{
@@ -110,7 +116,7 @@ contract DevNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
 
     function _burn(uint256 tokenId)
         internal
-        override(ERC721Upgradeable, ERC721URIStorageUpgradeable, ERC721DevStorageUpgradeable)
+        override(ERC721Upgradeable, ERC721URIStorageUpgradeable, ERC721AppStoreStorageUpgradeable)
     {
         super._burn(tokenId);
     }
