@@ -10,7 +10,7 @@
     "build": "turbo run build",
     "dev": "dotenv -- turbo run dev",
     "lint": "turbo run lint",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "format": "prettier --write \"**/*.{ts,tsx,md,js}\"",
     "prepare": "husky install"
   },
   "devDependencies": {
@@ -18,8 +18,8 @@
     "eslint-config-custom": "*",
     "husky": "^8.0.0",
     "lint-staged": "^13.2.0",
-    "prettier": "latest",
-    "turbo": "latest"
+    "prettier": "^2.8.7",
+    "turbo": "^1.8.5"
   },
   "lint-staged": {
     "(apps|packages)/**/*.{js,ts,jsx,tsx}": [

@@ -8,8 +8,6 @@ async function main() {
   console.log("AppNFT upgraded", appNFT);
 }
 
-
-
 main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
