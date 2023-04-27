@@ -234,7 +234,7 @@ describe(".app & .dev NFT minting", function () {
               devName.otherAccount + dev_uri,
               devName.owner
             )
-        ).to.be.revertedWith("ERC721DevStorage: this dev Name already in use");
+        ).to.be.revertedWith("ERC721NameStorage: this Name already in use");
       });
     });
 
@@ -380,10 +380,10 @@ describe(".app & .dev NFT minting", function () {
               "secondName"
             )
         ).not.to.be.reverted;
-        expect(await appNFT.tokensAppName(1)).to.equal(
+        expect(await appNFT.tokensName(1)).to.equal(
           `${appName.account1}.app`
         );
-        expect(await appNFT.tokensAppName(2)).to.equal("secondName.app");
+        expect(await appNFT.tokensName(2)).to.equal("secondName.app");
       });
     });
 
@@ -417,7 +417,7 @@ describe(".app & .dev NFT minting", function () {
               appName.otherAccount + app_uri,
               appName.owner
             )
-        ).to.be.revertedWith("ERC721APPStorage: this app Name already in use");
+        ).to.be.revertedWith("ERC721NameStorage: this Name already in use");
       });
 
       it("Should revert when the appName's special ie length is less than equal to 3", async function () {
@@ -483,8 +483,7 @@ describe(".app & .dev NFT minting", function () {
               "XX"
             )
         ).not.to.be.reverted;
-        // const tokenID = await appNFT.tokenIdForAppName("");
-        expect(await appNFT.tokensAppName(3)).to.equal("XX.app");
+        expect(await appNFT.tokensName(3)).to.equal("XX.app");
       });
 
       it("Should revert when the appName's blacklisted ie present in dappNameList", async function () {
@@ -552,10 +551,35 @@ describe(".app & .dev NFT minting", function () {
               specialdAppNames[1]
             )
         ).not.to.be.reverted;
-        // const tokenID = await appNFT.tokenIdForAppName("");
-        expect(await appNFT.tokensAppName(3)).to.equal(
+        expect(await appNFT.tokensName(3)).to.equal(
           `${specialdAppNames[1]}.app`
         );
+      });
+
+      it("Should revert if appname has subdomain", async function () {
+        const {
+          devNFT,
+          appNFT,
+          owner,
+          otherAccount,
+          devName,
+          appName,
+          dev_uri,
+          app_uri,
+          specialdAppNames,
+        } = await loadFixture(deployNFTsFixture);
+
+        await basicMintDone(devNFT, appNFT, dev_uri, app_uri, devName, appName);
+
+          await expect(
+            appNFT
+              .connect(otherAccount)
+              .safeMintAppNFT(
+                otherAccount.address,
+                appName.otherAccount + app_uri,
+                "mint.domain"
+              )
+          ).to.be.revertedWith("Subdomain not allowed");
       });
     });
 
@@ -607,7 +631,7 @@ describe(".app & .dev NFT minting", function () {
         } = await loadFixture(deployNFTsFixture);
 
         await basicMintDone(devNFT, appNFT, dev_uri, app_uri, devName, appName);
-        const tokenID = await appNFT.tokenIdForAppName(
+        const tokenID = await appNFT.tokenIdForName(
           `${appName.account1}.app`
         );
         await appNFT.connect(account1).createSale(tokenID, 10000000000);
@@ -633,7 +657,7 @@ describe(".app & .dev NFT minting", function () {
         } = await loadFixture(deployNFTsFixture);
 
         await basicMintDone(devNFT, appNFT, dev_uri, app_uri, devName, appName);
-        const tokenID = await appNFT.tokenIdForAppName(
+        const tokenID = await appNFT.tokenIdForName(
           `${appName.account1}.app`
         );
         await appNFT.connect(account1).createSale(tokenID, 10000000000);
@@ -659,7 +683,7 @@ describe(".app & .dev NFT minting", function () {
         } = await loadFixture(deployNFTsFixture);
 
         await basicMintDone(devNFT, appNFT, dev_uri, app_uri, devName, appName);
-        const tokenID = await appNFT.tokenIdForAppName(
+        const tokenID = await appNFT.tokenIdForName(
           `${appName.account1}.app`
         );
         await appNFT.connect(account1).createSale(tokenID, 10000000000);
