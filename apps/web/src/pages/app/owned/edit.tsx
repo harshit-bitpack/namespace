@@ -30,7 +30,9 @@ export default function EditInfo() {
 
       <div className="flex flex-col items-center justify-start max-w-[95%] md:max-w-[80%] lg:max-w-[50%] text-left md:text-center gap-y-4 md:gap-y-10 w-full min-h-[90vh] py-4">
         <div className="flex flex-col items-start justify-center w-full gap-y-4">
-          <h1 className="font-bold text-4xl md:text-6xl">App Details</h1>
+          <h1 className="font-bold text-4xl md:text-6xl">
+            {ext === "dev" ? "Dev Details" : "App Details"}
+          </h1>
         </div>
 
         {!address && (
@@ -54,7 +56,7 @@ export default function EditInfo() {
         )}
 
         {/* && !isLoading */}
-        {address && (
+        {address && !isLoading && (
           <div className="flex flex-col w-full gap-y-3 text-left">
             <div className="flex flex-row items-center justify-between w-full px-4 py-3 rounded-lg bg-white">
               <div className="flex flex-row gap-x-2 items-center justify-center">
