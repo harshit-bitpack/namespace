@@ -42,10 +42,9 @@ export default function App() {
     };
 
     try {
-      const data1 = await appContract.call(
-        "tokenIdForAppName",
-        search.replaceAll(".app", "") + ".app"
-      );
+      const data1 = await appContract.call("tokenIdForAppName", [
+        search.replaceAll(".app", "") + ".app",
+      ]);
       _available[`${search.replaceAll(".app", "")}.app`] = false;
     } catch (e) {
       const err = `${e}`;
@@ -56,10 +55,9 @@ export default function App() {
     }
 
     try {
-      const data2 = await devContract.call(
-        "tokenIdForDevName",
-        search.replaceAll(".dev", "") + ".dev"
-      );
+      const data2 = await devContract.call("tokenIdForDevName", [
+        search.replaceAll(".dev", "") + ".dev",
+      ]);
       _available[`${search.replaceAll(".dev", "")}.dev`] = false;
     } catch (e) {
       const err = `${e}`;
@@ -77,7 +75,7 @@ export default function App() {
     const devContract = await sdk.getContract(
       env.NEXT_PUBLIC_DEV_CONTRACT_ADDRESS
     );
-    const devBalance = await devContract.call("balanceOf", address);
+    const devBalance = await devContract.call("balanceOf", [address]);
     return devBalance !== 0;
   };
 

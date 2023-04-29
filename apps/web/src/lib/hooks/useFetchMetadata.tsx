@@ -27,13 +27,13 @@ export default function useFetchMetadata(name: string) {
             env.NEXT_PUBLIC_APP_CONTRACT_ADDRESS
           );
 
-          const tokenId = await appContract.call("tokenIdForAppName", name);
+          const tokenId = await appContract.call("tokenIdForAppName", [name]);
 
           if (!tokenId) {
             throw new Error("Invalid app name");
           }
 
-          const tokenUri = await appContract.call("tokenURI", tokenId);
+          const tokenUri = await appContract.call("tokenURI", [tokenId]);
 
           if (!tokenUri) return;
 
@@ -44,11 +44,11 @@ export default function useFetchMetadata(name: string) {
         const devContract = await sdk.getContract(
           env.NEXT_PUBLIC_DEV_CONTRACT_ADDRESS
         );
-        const tokenId = await devContract.call("tokenIdForDevName", name);
+        const tokenId = await devContract.call("tokenIdForDevName", [name]);
         if (!tokenId) {
           throw new Error("Invalid dev name");
         }
-        const tokenUri = await devContract.call("tokenURI", tokenId);
+        const tokenUri = await devContract.call("tokenURI", [tokenId]);
         if (!tokenUri) return;
 
         const stored = await storage.downloadJSON(tokenUri);

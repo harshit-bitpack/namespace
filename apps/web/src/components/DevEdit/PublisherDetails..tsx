@@ -281,16 +281,15 @@ export default function PublisherDetails({ devName }: { devName: string }) {
               );
 
               try {
-                const tokenId = await appContract.call(
-                  "tokenIdForDevName",
-                  devName
-                );
+                const tokenId = await appContract.call("tokenIdForDevName", [
+                  devName,
+                ]);
 
                 if (!tokenId) {
                   throw new Error("Invalid dev name");
                 }
 
-                await appContract.call("updateTokenURI", tokenId, uri);
+                await appContract.call("updateTokenURI", [tokenId, uri]);
 
                 toast.success("Dev updated successfully");
               } catch (e) {

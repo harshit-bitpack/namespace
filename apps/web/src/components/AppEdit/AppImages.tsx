@@ -150,13 +150,13 @@ export default function AppImages({
       );
 
       try {
-        const tokenId = await appContract.call("tokenIdForAppName", appName);
+        const tokenId = await appContract.call("tokenIdForAppName", [appName]);
 
         if (!tokenId) {
           throw new Error("Invalid app name");
         }
 
-        await appContract.call("updateTokenURI", tokenId, uri);
+        await appContract.call("updateTokenURI", [tokenId, uri]);
 
         resolve("App updated successfully");
       } catch (e: any) {

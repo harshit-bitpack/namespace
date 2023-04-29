@@ -3,7 +3,7 @@
 
 FROM node:alpine AS builder
 # Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat python3 build-base
 RUN apk update
 # Set working directory
 WORKDIR /app
@@ -13,7 +13,7 @@ RUN turbo prune --scope=web --docker
 
 # Add lockfile and package.json's of isolated subworkspace
 FROM node:alpine AS installer
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat python3 build-base
 RUN apk update
 WORKDIR /app
 
@@ -34,6 +34,18 @@ COPY --from=builder /app/out/full/ .
 
 # ARG TURBO_TOKEN
 # ENV TURBO_TOKEN=$TURBO_TOKEN
+
+ARG NEXT_PUBLIC_BICONOMY_API_KEY
+ENV NEXT_PUBLIC_BICONOMY_API_KEY=$NEXT_PUBLIC_BICONOMY_API_KEY
+
+
+ARG NEXT_PUBLIC_DEV_CONTRACT_ADDRESS
+ENV NEXT_PUBLIC_DEV_CONTRACT_ADDRESS=$NEXT_PUBLIC_DEV_CONTRACT_ADDRESS
+
+
+ARG NEXT_PUBLIC_APP_CONTRACT_ADDRESS
+ENV NEXT_PUBLIC_APP_CONTRACT_ADDRESS=$NEXT_PUBLIC_APP_CONTRACT_ADDRESS
+
 
 RUN yarn turbo run build --filter=web...
 
