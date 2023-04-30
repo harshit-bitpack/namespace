@@ -10,7 +10,7 @@ This is a [turbo monorepo](https://turbo.build).
 
 Primary directories
 
-- [app/web](app/web) Webapp for minting of NFTs core to Meroku Protocol.
+- [apps/web](apps/web) Webapp for minting of NFTs core to Meroku Protocol.
 - [packages/contracts](packages/contract/) Smart Contract for the Meroku Protocol.
 
 # Getting started
