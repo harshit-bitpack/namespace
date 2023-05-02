@@ -120,6 +120,7 @@ export default function AppImages({
   watch: UseFormWatch<FieldValues>;
   appName: string;
 }) {
+  console.log("MetaData : ", metaData);
   const [isSaving, setIsSaving] = useState(false);
   const { mutateAsync: upload } = useStorageUpload();
   const sdk = useSDK();
@@ -274,7 +275,7 @@ export default function AppImages({
         <div className="w-full flex flex-row justify-end gap-x-4">
           <Button variant="outline">Cancel</Button>
           <Button onClick={onSave} disabled={isSaving}>
-            Save
+            Save on Chain
           </Button>
         </div>
       </div>

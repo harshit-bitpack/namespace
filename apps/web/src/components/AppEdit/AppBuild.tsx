@@ -56,6 +56,7 @@ export default function AppBuild({
   metadata: any;
   isMetaLoading: boolean;
 }) {
+  console.log("MetaData : ", metadata);
   const [appType, setAppType] = useState<"android" | "web" | "ios">("android");
   const [minVersion, setMinVersion] = useState<string>();
   const [isSaving, setIsSaving] = useState(false);
