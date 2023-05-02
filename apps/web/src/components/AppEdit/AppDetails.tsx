@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { countries } from "countries-list";
 import iso6391 from "iso-639-1";
 import Spinner from "../Spinner";
+import { categories, subCategories } from "../../lib/utils";
 
 const AppDetailsRow = ({
   children,
@@ -51,18 +52,20 @@ export default function AppDetails({
   metadata: any;
   isMetaLoading: boolean;
 }) {
-  // const { metadata, isMetaLoading, error } = useFetchMetadata(appName);
+  console.log("MetaData : ", metadata);
   const sdk = useSDK();
   const storage = useStorage();
   const [saving, setSaving] = useState(false);
 
-  const [name, setName] = useState<string>("");
-  const [description, setDescription] = useState<string>("");
-  const [appUrl, setAppUrl] = useState("");
-  const [repoUrl, setRepoUrl] = useState("");
+  const [name, setName] = useState<string>();
+  const [description, setDescription] = useState<string>();
+  const [appUrl, setAppUrl] = useState<string>();
+  const [repoUrl, setRepoUrl] = useState<string>();
   const [dappId, setDappId] = useState(appName);
   const [chainIdArr, setChainIdArr] = useState<string[]>([]);
   const [chainId, setChainId] = useState<string>();
+  const [category, setCategory] = useState<string>();
+  const [subCategory, setSubCategory] = useState<string>();
 
   const addChainId = (newChainId: string) => {
     setChainIdArr((prev) => {
@@ -136,9 +139,17 @@ export default function AppDetails({
   }, [metadata]);
 
   const [language, setLanguage] = useState<string[]>([]);
-  const [minimumAge, setMinimumAge] = useState(0);
+  const [minimumAge, setMinimumAge] = useState<number>(0);
 
   useEffect(() => {
+    if (metadata.category) {
+      setCategory(metadata.category);
+    }
+
+    if (metadata.subCategory) {
+      setSubCategory(metadata.subCategory);
+    }
+
     if (metadata.language) {
       setLanguage(metadata.language);
     }
@@ -148,7 +159,7 @@ export default function AppDetails({
     }
   }, [metadata]);
 
-  const [version, setVersion] = useState("");
+  const [version, setVersion] = useState<string>();
 
   const [tags, setTags] = useState<string[]>([]);
 
@@ -170,6 +181,19 @@ export default function AppDetails({
     label: name,
   }));
 
+  const categoryOptions = categories.map((category) => ({
+    value: category,
+    label: category,
+  }));
+
+  let subCategoryOptions: { value: string; label: string }[] = [];
+  if (category && category in subCategories) {
+    subCategoryOptions = subCategories[category].map((sc: string) => ({
+      label: sc,
+      value: sc,
+    }));
+  }
+
   return (
     <div className="flex flex-col items-center justify-start w-full rounded-lg bg-white shadow-[0_20_20_60_#0000000D] overflow-hidden">
       {isMetaLoading && (
@@ -188,8 +212,8 @@ export default function AppDetails({
 
           <AppDetailsRow label="Name" isRequired>
             <Input
-              placeholder={metadata.name ?? "Enter a name"}
-              value={name}
+              placeholder={"Enter a name"}
+              value={metadata.name ?? name}
               onChange={(e) => setName(e.target.value)}
               required
             />
@@ -200,8 +224,8 @@ export default function AppDetails({
             isRequired
           >
             <Textarea
-              placeholder={metadata.description ?? "Enter a description"}
-              value={description}
+              placeholder={"Enter a description"}
+              value={metadata.description ?? description}
               onChange={(e) => setDescription(e.target.value)}
             />
           </AppDetailsRow>
@@ -215,18 +239,16 @@ export default function AppDetails({
                 <span className="text-red-500">*</span>
               </Label>
               <Input
-                placeholder={metadata.appUrl ?? "https://bitpack.me"}
-                value={appUrl}
+                placeholder={"https://bitpack.me"}
+                value={metadata.appUrl ?? appUrl}
                 onChange={(e) => setAppUrl(e.target.value)}
               />
             </div>
             <div className="flex flex-col gap-y-2">
               <Label>Repo URL</Label>
               <Input
-                placeholder={
-                  metadata.repoUrl ?? "https://github.com/bitpack.me"
-                }
-                value={repoUrl}
+                placeholder={"https://github.com/bitpack.me"}
+                value={metadata.repoUrl ?? repoUrl}
                 onChange={(e) => setRepoUrl(e.target.value)}
               />
             </div>
@@ -253,7 +275,6 @@ export default function AppDetails({
                       <SelectContent>
                         <SelectItem value="1">Ethereum</SelectItem>
                         <SelectItem value="137">Polygon</SelectItem>
-                        <SelectItem value="80001">Mumbai</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -343,7 +364,46 @@ export default function AppDetails({
 
           <AppDetailsRow label="Other Information">
             <div className="flex flex-col gap-y-2">
-              <Label>Language</Label>
+              <Label>
+                Category
+                <span className="text-red-500">*</span>
+              </Label>
+              <ReactSelect
+                options={categoryOptions}
+                onChange={(selectedOption) => {
+                  if (selectedOption) {
+                    setSubCategory(undefined);
+                    setCategory(selectedOption.value);
+                  }
+                }}
+                value={categoryOptions.find((c) => c.value === category)}
+              />
+            </div>
+            <div className="flex flex-col gap-y-2">
+              <Label>Sub-Category</Label>
+              <ReactSelect
+                options={subCategoryOptions}
+                onChange={(selectedOption) => {
+                  if (selectedOption) {
+                    setSubCategory(selectedOption.value);
+                  } else {
+                    setSubCategory(undefined);
+                  }
+                }}
+                isClearable={true}
+                placeholder={"Select..."}
+                value={
+                  subCategory
+                    ? { label: subCategory, value: subCategory }
+                    : null
+                }
+              />
+            </div>
+            <div className="flex flex-col gap-y-2">
+              <Label>
+                Language
+                <span className="text-red-500">*</span>
+              </Label>
               <ReactSelect
                 options={languagesOptions}
                 isMulti
@@ -365,7 +425,10 @@ export default function AppDetails({
               />
             </div>
             <div className="flex flex-col gap-y-2">
-              <Label>Minimum Age</Label>
+              <Label>
+                Minimum Age
+                <span className="text-red-500">*</span>
+              </Label>
               <Select
                 onValueChange={(v) => {
                   setMinimumAge(parseInt(v));
@@ -381,6 +444,7 @@ export default function AppDetails({
                   <SelectItem value="5">5</SelectItem>
                   <SelectItem value="13">13</SelectItem>
                   <SelectItem value="18">18</SelectItem>
+                  <SelectItem value="21">21</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -390,8 +454,8 @@ export default function AppDetails({
                 <span className="text-red-500">*</span>
               </Label>
               <Input
-                placeholder={metadata.version ?? "version"}
-                value={version}
+                placeholder={"version"}
+                value={metadata.version ?? version}
                 onChange={(e) => setVersion(e.target.value)}
               />
             </div>
@@ -410,31 +474,29 @@ export default function AppDetails({
 
                 setSaving(true);
 
-                const newMetadata = {
-                  ...metadata,
-                };
-
-                if (name) {
-                  metadata.name = name;
+                if (!name && !metadata.name) {
+                  toast.message("Name is required");
+                  return;
                 }
+                metadata.name = name;
 
-                if (description) {
-                  metadata.description = description;
-                  //newMetadata.description = description;
+                if (!description && !metadata.description) {
+                  toast.message("Description is required");
+                  return;
                 }
+                metadata.description = description;
 
-                if (appUrl) {
-                  // newMetadata.appUrl = appUrl;
-                  metadata.appUrl = appUrl;
+                if (!appUrl && !metadata.appUrl) {
+                  toast.message("URL is required");
+                  return;
                 }
+                metadata.appUrl = appUrl;
 
                 if (repoUrl) {
-                  // newMetadata.repoUrl = repoUrl;
                   metadata.repoUrl = repoUrl;
                 }
 
                 if (dappId) {
-                  // newMetadata.dappId = dappId;
                   metadata.dappId = dappId;
                 }
 
@@ -443,52 +505,36 @@ export default function AppDetails({
                 // }
 
                 if (contractArr) {
-                  // newMetadata.contractAddress = contractAddress;
                   metadata.contractAddress = contractArr;
                 }
 
-                // newMetadata.allowedCountries = allowedCountries;
                 metadata.allowedCountries = allowedCountries;
-                // newMetadata.deniedCountries = deniedCountries;
                 metadata.deniedCountries = deniedCountries;
+                if (!category && !metadata.category) {
+                  toast.message("Category is required");
+                  return;
+                }
+                metadata.category = category;
 
-                // newMetadata.language = language;
-                metadata.language = language;
-                // newMetadata.minimumAge = minimumAge;
-                metadata.minimumAge = minimumAge;
-
-                if (version) {
-                  // newMetadata.version = version;
-                  metadata.version = version;
+                if (subCategory) {
+                  metadata.subCategory = subCategory;
                 }
 
-                // newMetadata.tags = tags;
-                metadata.tags = ["abc", "def"];
+                if (!language && !metadata.language) {
+                  toast.message("Language is required");
+                  return;
+                }
+                metadata.language = language;
+                metadata.minimumAge = minimumAge;
 
-                // const uri = await storage.upload(newMetadata);
-
-                // const appContract = await sdk.getContract(
-                //   env.NEXT_PUBLIC_APP_CONTRACT_ADDRESS
-                // );
-
-                // try {
-                //   const tokenId = await appContract.call(
-                //     "tokenIdForAppName",
-                //     appName
-                //   );
-
-                //   if (!tokenId) {
-                //     throw new Error("Invalid app name");
-                //   }
-
-                //   await appContract.call("updateTokenURI", tokenId, uri);
-
-                //   toast.success("App updated successfully");
-                // } catch (e) {
-                //   const err = `${e}`;
-                //   toast.error(err);
-                // }
-
+                if (!version && !metadata.version) {
+                  toast.message("Version is required");
+                  return;
+                }
+                metadata.version = version;
+                if (tags) {
+                  metadata.tags = tags;
+                }
                 setSaving(false);
               }}
             >
