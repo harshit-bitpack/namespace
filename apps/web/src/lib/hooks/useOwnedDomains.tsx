@@ -27,29 +27,29 @@ export default function useOwnedDomains() {
           env.NEXT_PUBLIC_DEV_CONTRACT_ADDRESS
         );
 
-        const appBalance = await appContract.call("balanceOf", address);
-        const devBalance = await devContract.call("balanceOf", address);
+        const appBalance = await appContract.call("balanceOf", [address]);
+        const devBalance = await devContract.call("balanceOf", [address]);
 
         const appIds = (
           await Promise.all(
             Array.from(Array(Number(appBalance)).keys()).map((i) =>
-              appContract.call("tokenOfOwnerByIndex", address, i)
+              appContract.call("tokenOfOwnerByIndex", [address, i])
             )
           )
         ).map((i) => Number(i));
         const devIds = (
           await Promise.all(
             Array.from(Array(Number(devBalance)).keys()).map((i) =>
-              devContract.call("tokenOfOwnerByIndex", address, i)
+              devContract.call("tokenOfOwnerByIndex", [address, i])
             )
           )
         ).map((i) => Number(i));
 
         const appNames = await Promise.all(
-          appIds.map((i) => appContract.call("tokensAppName", i))
+          appIds.map((i) => appContract.call("tokensAppName", [i]))
         );
         const devNames = await Promise.all(
-          devIds.map((i) => devContract.call("tokensDevName", i))
+          devIds.map((i) => devContract.call("tokensDevName", [i]))
         );
 
         setAppNfts(appNames);

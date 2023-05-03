@@ -12,6 +12,7 @@ import NavbarApp from "@/components/Navbar/App";
 import Spacer from "@/components/Spacer";
 import GlobalSearchIcon from "@/public/global-search.svg";
 import Spinner from "@/components/Spinner";
+import { ThirdwebSDK } from "@thirdweb-dev/sdk";
 
 export default function App() {
   const router = useRouter();
@@ -41,10 +42,9 @@ export default function App() {
     };
 
     try {
-      const data1 = await appContract.call(
-        "tokenIdForAppName",
-        search.replaceAll(".app", "") + ".app"
-      );
+      const data1 = await appContract.call("tokenIdForAppName", [
+        search.replaceAll(".app", "") + ".app",
+      ]);
       _available[`${search.replaceAll(".app", "")}.app`] = false;
     } catch (e) {
       const err = `${e}`;
@@ -55,10 +55,9 @@ export default function App() {
     }
 
     try {
-      const data2 = await devContract.call(
-        "tokenIdForDevName",
-        search.replaceAll(".dev", "") + ".dev"
-      );
+      const data2 = await devContract.call("tokenIdForDevName", [
+        search.replaceAll(".dev", "") + ".dev",
+      ]);
       _available[`${search.replaceAll(".dev", "")}.dev`] = false;
     } catch (e) {
       const err = `${e}`;
@@ -72,6 +71,14 @@ export default function App() {
     setLoading(false);
   };
 
+  const isDevAlreadyMinted = async (sdk: ThirdwebSDK): Promise<boolean> => {
+    const devContract = await sdk.getContract(
+      env.NEXT_PUBLIC_DEV_CONTRACT_ADDRESS
+    );
+    const devBalance = await devContract.call("balanceOf", [address]);
+    return devBalance !== 0;
+  };
+
   const claimNFT = async (name: string) => {
     const sendTx = async (
       resolve: (value: any) => void,
@@ -83,6 +90,12 @@ export default function App() {
         const nftType = name.split(".").pop();
 
         if (nftType === "app") {
+          if (await !isDevAlreadyMinted(sdk)) {
+            throw Error(
+              "You don't have any Dev domain. Kindly first claim a Dev domain."
+            );
+          }
+
           const appContract = await sdk.getContract(
             env.NEXT_PUBLIC_APP_CONTRACT_ADDRESS
           );
@@ -110,6 +123,9 @@ export default function App() {
           const data = await tx.send();
           console.log(data);
         } else if (nftType === "dev") {
+          if (await isDevAlreadyMinted(sdk)) {
+            throw Error("You already claimed a Dev Domain");
+          }
           const devContract = await sdk.getContract(
             env.NEXT_PUBLIC_DEV_CONTRACT_ADDRESS
           );
@@ -143,14 +159,19 @@ export default function App() {
           [name]: false,
         }));
         return resolve("done");
-      } catch (e) {
-        return reject(e);
+      } catch (e: any) {
+        if (e.message.includes("user rejected signing")) {
+          return reject("User rejected signing");
+        }
+        return reject(e.message);
       }
     };
 
     toast.promise(new Promise((resolve, reject) => sendTx(resolve, reject)), {
       success: `Successfully claimed domain ${name}`,
-      error: `Failed to claim domain ${name}`,
+      error: (data) => {
+        return `${data}`;
+      },
       loading: `Claiming domain ${name}...`,
     });
   };
