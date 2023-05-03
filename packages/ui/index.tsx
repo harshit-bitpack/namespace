@@ -7,3 +7,4 @@ export * from "./Dropdown";
 export * from "./Select";
 export * from "./Radio";
 export * from "./Switch";
+export * from "./Checkbox";

@@ -11,10 +11,28 @@ import {
   SelectValue,
   Label,
   Button,
-  RadioGroup,
-  RadioGroupItem,
-  Switch,
+  Checkbox,
 } from "ui";
+
+type checkboxState = {
+  android: boolean;
+  web: boolean;
+  ios: boolean;
+};
+
+type AndroidState = {
+  minVersion: string | undefined;
+  architecture: string | undefined;
+  screenDpi: string | undefined;
+  apk: File | undefined;
+};
+
+type IosState = {
+  minVersion: string | undefined;
+  architecture: string | undefined;
+  screenDpi: string | undefined;
+  ipa: File | undefined;
+};
 
 const AppBuildRow = ({
   children,
@@ -56,32 +74,52 @@ export default function AppBuild({
   metadata: any;
   isMetaLoading: boolean;
 }) {
-  console.log("MetaData : ", metadata);
-  const [appType, setAppType] = useState<"android" | "web" | "ios">("android");
-  const [minVersion, setMinVersion] = useState<string>();
-  const [isSaving, setIsSaving] = useState(false);
-  const [architecture, setArchitecture] = useState<string>();
-  const [screenDpi, setScreenDpi] = useState<string>();
-  const { mutateAsync: upload } = useStorageUpload();
-  const isAndroid = appType === "android";
-  const isWeb = appType === "web";
-  const isIOS = appType === "ios";
+  const [appType, setAppType] = useState<checkboxState>({
+    android: true,
+    web: false,
+    ios: false,
+  });
 
-  const [apk, setApk] = useState<File>();
-  const [ipa, setIpa] = useState<File>();
+  const handleCheckboxChange = (type: keyof checkboxState) => {
+    setAppType({
+      ...appType,
+      [type]: !appType[type],
+    });
+  };
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [android, setAndroid] = useState<AndroidState>({
+    minVersion: "",
+    architecture: "",
+    screenDpi: "",
+    apk: undefined,
+  });
+
+  const [ios, setIos] = useState<IosState>({
+    minVersion: "",
+    architecture: "",
+    screenDpi: "",
+    ipa: undefined,
+  });
+
+  const { mutateAsync: upload } = useStorageUpload();
+  const isAndroid = appType["android"];
+  const isWeb = appType["web"];
+  const isIOS = appType["ios"];
+
+  console.log("andy", android);
+  console.log("ios", ios);
 
   const uploadToIpfs = async () => {
-    if (appType === "android" && !apk) {
+    if ((appType["android"] && !android.apk) || (appType["ios"] && !ios.ipa)) {
       toast.message("Upload the file");
       return;
     }
 
-    if (appType === "ios" && !ipa) {
-      toast.message("Upload the file");
-      return;
-    }
-
-    if (!minVersion) {
+    if (
+      (appType["android"] && !android.minVersion) ||
+      (appType["ios"] && !ios.minVersion)
+    ) {
       toast.message("Minimum version is required");
       return;
     }
@@ -92,27 +130,65 @@ export default function AppBuild({
     ) => {
       try {
         setIsSaving(true);
-        const uploadUrl = await upload({
-          data: [appType === "android" ? apk : ipa],
-          options: {
-            uploadWithGatewayUrl: true,
-            uploadWithoutDirectory: false,
-          },
-        });
-        clearValues();
-        const newItem = {
-          url: uploadUrl[0],
-          platform: appType,
-          minVersion: minVersion,
-          architecture: architecture,
-          screenDPI: screenDpi,
-        };
-        if (!metadata.downloadBaseUrls) {
-          metadata.downloadBaseUrls = [newItem];
-          setIsSaving(false);
-          return resolve("done");
+
+        let ipaUploadUrl: string[] = [];
+        let apkUploadUrl: string[] = [];
+
+        if (appType["android"] && apkUploadUrl.length === 0) {
+          apkUploadUrl = await upload({
+            data: [android.apk],
+            options: {
+              uploadWithGatewayUrl: true,
+              uploadWithoutDirectory: false,
+            },
+          });
         }
-        metadata.downloadBaseUrls.push(newItem);
+
+        if (appType["ios"] && ipaUploadUrl.length === 0) {
+          ipaUploadUrl = await upload({
+            data: [ios.ipa],
+            options: {
+              uploadWithGatewayUrl: true,
+              uploadWithoutDirectory: false,
+            },
+          });
+        }
+
+        console.log("ipaurl", ipaUploadUrl[0]);
+        console.log("apkurl", apkUploadUrl[0]);
+
+        clearValues();
+        if (appType["android"] && apkUploadUrl.length > 0) {
+          const newItem = {
+            url: apkUploadUrl[0],
+            platform: "android",
+            minVersion: android.minVersion,
+            architecture: android.architecture,
+            screenDPI: android.screenDpi,
+          };
+          if (!metadata.downloadBaseUrls) {
+            metadata.downloadBaseUrls = [newItem];
+          } else if (metadata.downloadBaseUrls) {
+            metadata.downloadBaseUrls.push(newItem);
+          }
+          console.log("apkMetadata", metadata);
+        }
+
+        if (appType["ios"] && ipaUploadUrl.length > 0) {
+          const newItem = {
+            url: ipaUploadUrl[0],
+            platform: "ios",
+            minVersion: ios.minVersion,
+            architecture: ios.architecture,
+            screenDPI: ios.screenDpi,
+          };
+          if (!metadata.downloadBaseUrls) {
+            metadata.downloadBaseUrls = [newItem];
+          } else if (metadata.downloadBaseUrls) {
+            metadata.downloadBaseUrls.push(newItem);
+          }
+          console.log("iosMetadata", metadata);
+        }
         setIsSaving(false);
         return resolve("done");
       } catch (e: any) {
@@ -133,8 +209,22 @@ export default function AppBuild({
   };
 
   const clearValues = () => {
-    setMinVersion(() => "");
-    appType === "android" ? setApk(() => undefined) : setIpa(() => undefined);
+    if (appType["android"]) {
+      setAndroid({
+        minVersion: "",
+        architecture: "",
+        screenDpi: "",
+        apk: undefined,
+      });
+    }
+    if (appType["ios"]) {
+      setIos({
+        minVersion: "",
+        architecture: "",
+        screenDpi: "",
+        ipa: undefined,
+      });
+    }
   };
 
   return (
@@ -147,39 +237,37 @@ export default function AppBuild({
         </div>
 
         <AppBuildRow label="App Type" isRequired>
-          <RadioGroup defaultValue={appType}>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem
-                onClick={(e) => {
-                  setAppType("android");
-                }}
-                value="android"
-                id="android"
-              />
-              <Label htmlFor="android">Android</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem
-                onClick={(e) => {
-                  setAppType("web");
-                }}
-                value="web"
-                id="web"
-                disabled
-              />
-              <Label htmlFor="web">Web</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem
-                onClick={(e) => {
-                  setAppType("ios");
-                }}
-                value="ios"
-                id="ios"
-              />
-              <Label htmlFor="ios">iOS</Label>
-            </div>
-          </RadioGroup>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              onClick={(e) => {
+                handleCheckboxChange("android");
+              }}
+              checked={appType["android"]}
+              id="android"
+            />
+            <Label htmlFor="android">Android</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              onClick={(e) => {
+                handleCheckboxChange("web");
+              }}
+              checked={appType["web"]}
+              id="web"
+              disabled
+            />
+            <Label htmlFor="web">Web</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              onClick={(e) => {
+                handleCheckboxChange("ios");
+              }}
+              checked={appType["ios"]}
+              id="ios"
+            />
+            <Label htmlFor="ios">iOS</Label>
+          </div>
         </AppBuildRow>
 
         <hr />
@@ -188,7 +276,7 @@ export default function AppBuild({
           <AppBuildRow label="Android">
             <div className="flex items-center justify-center w-full">
               <label
-                htmlFor="dropzone-file"
+                htmlFor="dropzone-file-android"
                 className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600"
               >
                 <div className="flex flex-col items-center justify-center pt-5 pb-6">
@@ -216,19 +304,19 @@ export default function AppBuild({
                   </p>
                 </div>
                 <input
-                  id="dropzone-file"
+                  id="dropzone-file-android"
                   type="file"
                   accept=".apk"
                   className="hidden"
                   onChange={(e) => {
                     if (!e.target.files || !e.target.files[0]) return;
-                    setApk(e.target.files[0]);
+                    setAndroid({ ...android, apk: e.target.files[0] });
                     e.target.value = "";
                   }}
                 />
               </label>
             </div>
-            {apk && (
+            {android.apk && (
               <div className="w-full h-full justify-center border border-[#2678FD] rounded-lg p-4 flex flex-col gap-y-3">
                 <div className="flex flex-row items-center justify-between">
                   <div className="flex flex-row gap-x-2 w-[80%]">
@@ -237,16 +325,18 @@ export default function AppBuild({
                     </div>
 
                     <div className="flex flex-col gap-y-1 w-[70%]">
-                      <p className="font-medium text-sm truncate">{apk.name}</p>
+                      <p className="font-medium text-sm truncate">
+                        {android.apk.name}
+                      </p>
                       <p className="text-sm text-[#475467]">
-                        {(apk.size / 1024 / 1024).toFixed(2)}
+                        {(android.apk.size / 1024 / 1024).toFixed(2)}
                         MB
                       </p>
                     </div>
                   </div>
                   <button
                     onClick={() => {
-                      setApk(undefined);
+                      setAndroid({ ...android, apk: undefined });
                     }}
                     className="ease-in-out transition-all active:scale-90"
                   >
@@ -263,7 +353,7 @@ export default function AppBuild({
                 <Label>Architecture</Label>
                 <Select
                   onValueChange={(v) => {
-                    setArchitecture(v as any);
+                    setAndroid({ ...android, architecture: v as any });
                   }}
                 >
                   <SelectTrigger className="w-full">
@@ -278,7 +368,7 @@ export default function AppBuild({
                 <Label>Screen DPI</Label>
                 <Select
                   onValueChange={(v) => {
-                    setScreenDpi(v as any);
+                    setAndroid({ ...android, screenDpi: v as any });
                   }}
                 >
                   <SelectTrigger className="w-full">
@@ -299,8 +389,10 @@ export default function AppBuild({
               <Input
                 placeholder="10.0.0"
                 required
-                value={minVersion}
-                onChange={(e) => setMinVersion(e.target.value)}
+                value={android.minVersion}
+                onChange={(e) =>
+                  setAndroid({ ...android, minVersion: e.target.value })
+                }
               />
             </div>
           </AppBuildRow>
@@ -334,7 +426,7 @@ export default function AppBuild({
           <AppBuildRow label="iOS">
             <div className="flex items-center justify-center w-full">
               <label
-                htmlFor="dropzone-file"
+                htmlFor="dropzone-file-ios"
                 className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600"
               >
                 <div className="flex flex-col items-center justify-center pt-5 pb-6">
@@ -358,23 +450,23 @@ export default function AppBuild({
                     drag and drop
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    APK
+                    IPA
                   </p>
                 </div>
                 <input
-                  id="dropzone-file"
+                  id="dropzone-file-ios"
                   type="file"
                   accept=".ipa"
                   className="hidden"
                   onChange={(e) => {
                     if (!e.target.files || !e.target.files[0]) return;
-                    setIpa(e.target.files[0]);
+                    setIos({ ...ios, ipa: e.target.files[0] });
                     e.target.value = "";
                   }}
                 />
               </label>
             </div>
-            {ipa && (
+            {ios.ipa && (
               <div className="w-full h-full justify-center border border-[#2678FD] rounded-lg p-4 flex flex-col gap-y-3">
                 <div className="flex flex-row items-center justify-between">
                   <div className="flex flex-row gap-x-2 w-[80%]">
@@ -383,16 +475,23 @@ export default function AppBuild({
                     </div>
 
                     <div className="flex flex-col gap-y-1 w-[70%]">
-                      <p className="font-medium text-sm truncate">{ipa.name}</p>
+                      <p className="font-medium text-sm truncate">
+                        {ios.ipa.name}
+                      </p>
                       <p className="text-sm text-[#475467]">
-                        {(ipa.size / 1024 / 1024).toFixed(2)}
+                        {(ios.ipa.size / 1024 / 1024).toFixed(2)}
                         MB
                       </p>
                     </div>
                   </div>
                   <button
                     onClick={() => {
-                      setIpa(undefined);
+                      setIos({
+                        minVersion: undefined,
+                        architecture: undefined,
+                        screenDpi: undefined,
+                        ipa: undefined,
+                      });
                     }}
                     className="ease-in-out transition-all active:scale-90"
                   >
@@ -409,7 +508,7 @@ export default function AppBuild({
                 <Label>Architecture</Label>
                 <Select
                   onValueChange={(v) => {
-                    setArchitecture(v as any);
+                    setIos({ ...ios, architecture: v as any });
                   }}
                 >
                   <SelectTrigger className="w-full">
@@ -424,7 +523,7 @@ export default function AppBuild({
                 <Label>Screen DPI</Label>
                 <Select
                   onValueChange={(v) => {
-                    setScreenDpi(v as any);
+                    setIos({ ...ios, screenDpi: v as any });
                   }}
                 >
                   <SelectTrigger className="w-full">
@@ -445,15 +544,23 @@ export default function AppBuild({
               <Input
                 placeholder="10.0.0"
                 required
-                value={minVersion}
-                onChange={(e) => setMinVersion(e.target.value)}
+                value={ios.minVersion}
+                onChange={(e) => setIos({ ...ios, minVersion: e.target.value })}
               />
             </div>
           </AppBuildRow>
         )}
 
         <div className="w-full flex flex-row justify-end gap-x-4">
-          <Button onClick={uploadToIpfs} disabled={isSaving}>
+          <Button
+            onClick={uploadToIpfs}
+            disabled={
+              isSaving ||
+              Object.keys(appType).every(
+                (app) => !appType[app as keyof checkboxState]
+              )
+            }
+          >
             Save
           </Button>
           <Button variant="outline" onClick={clearValues}>
