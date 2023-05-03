@@ -92,13 +92,12 @@ contract AppStoreNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enume
      * @notice mints new .appStore NFT
      * @dev checks that minter has not already minted a token and emits an AppStoreNameSet event after minting
      * @param to the address to mint the token to
-     * @param uri the uri to set for the token
      * @param appStoreName the name of appStore to set for the token
      */
-    function safeMintAppStoreNFT(address to, string memory uri, string calldata appStoreName) external whenNotPaused {
+    function safeMintAppStoreNFT(address to, string calldata appStoreName) external whenNotPaused {
         require(balanceOf(to)==0, "provided wallet already used to create app");
         string memory validatedAppStoreName = _validateName(appStoreName);
-        mint(to, uri, validatedAppStoreName);
+        mint(to, "", validatedAppStoreName);
     }
 
 
@@ -145,6 +144,17 @@ contract AppStoreNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enume
     function blockApp(uint256 _appStoreTokenId, uint256 _appTokenId) external {
         require(_isApprovedOrOwner(msg.sender, _appStoreTokenId), "ERC721: function caller is not owner nor approved");
         isBlocked[_appStoreTokenId][_appTokenId] = true;
+    }
+
+    /**
+     * @notice unblocks the blocked app for the given appStore token ID
+     * @dev checks that the caller is the owner or approved for the token
+     * @param _appStoreTokenId the appStore token ID to block the app for
+     * @param _appTokenId the app token ID to block
+     */
+    function unBlockApp(uint256 _appStoreTokenId, uint256 _appTokenId) external {
+        require(_isApprovedOrOwner(msg.sender, _appStoreTokenId), "ERC721: function caller is not owner nor approved");
+        isBlocked[_appStoreTokenId][_appTokenId] = false;
     }
 
     /**

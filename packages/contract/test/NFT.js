@@ -83,26 +83,22 @@ describe(".app & .dev NFT minting", function () {
 
     await devNFT.safeMintDevNFT(
       owner.address,
-      devName.owner + dev_uri,
       devName.owner
     );
     await devNFT
       .connect(account1)
       .safeMintDevNFT(
         account1.address,
-        devName.account1 + dev_uri,
         devName.account1
       );
     await appNFT.safeMintAppNFT(
       owner.address,
-      appName.owner + app_uri,
       appName.owner
     );
     await appNFT
       .connect(account1)
       .safeMintAppNFT(
         account1.address,
-        appName.account1 + app_uri,
         appName.account1
       );
   }
@@ -182,7 +178,6 @@ describe(".app & .dev NFT minting", function () {
             .connect(account1)
             .safeMintDevNFT(
               account1.address,
-              devName.account1 + dev_uri,
               devName.account1
             )
         ).not.to.be.reverted;
@@ -197,7 +192,6 @@ describe(".app & .dev NFT minting", function () {
           .connect(account1)
           .safeMintDevNFT(
             account1.address,
-            devName.account1 + dev_uri,
             devName.account1
           );
         // Caled second time
@@ -206,7 +200,6 @@ describe(".app & .dev NFT minting", function () {
             .connect(account1)
             .safeMintDevNFT(
               account1.address,
-              devName.account1 + dev_uri,
               devName.account1
             )
         ).to.be.revertedWith("provided wallet already used to create app");
@@ -231,7 +224,6 @@ describe(".app & .dev NFT minting", function () {
             .connect(otherAccount)
             .safeMintDevNFT(
               otherAccount.address,
-              devName.otherAccount + dev_uri,
               devName.owner
             )
         ).to.be.revertedWith("ERC721NameStorage: this Name already in use");
@@ -288,7 +280,6 @@ describe(".app & .dev NFT minting", function () {
           .connect(account1)
           .safeMintDevNFT(
             account1.address,
-            devName.account1 + app_uri,
             devName.account1
           );
         await expect(
@@ -296,7 +287,6 @@ describe(".app & .dev NFT minting", function () {
             .connect(account1)
             .safeMintAppNFT(
               account1.address,
-              appName.account1 + app_uri,
               appName.account1
             )
         ).not.to.be.reverted;
@@ -312,7 +302,6 @@ describe(".app & .dev NFT minting", function () {
             .connect(account1)
             .safeMintAppNFT(
               account1.address,
-              appName.account1 + app_uri,
               appName.account1
             )
         ).not.to.be.reverted;
@@ -326,7 +315,6 @@ describe(".app & .dev NFT minting", function () {
           .connect(account1)
           .safeMintDevNFT(
             account1.address,
-            devName.account1 + dev_uri,
             devName.account1
           );
         await expect(
@@ -334,7 +322,6 @@ describe(".app & .dev NFT minting", function () {
             .connect(account1)
             .safeMintAppNFT(
               account1.address,
-              appName.account1 + app_uri,
               appName.account1
             )
         );
@@ -343,7 +330,6 @@ describe(".app & .dev NFT minting", function () {
             .connect(account1)
             .safeMintAppNFT(
               account1.address,
-              appName.account1 + app_uri,
               appName.account1
             )
         ).to.be.revertedWith("provided wallet already used to create app");
@@ -358,7 +344,6 @@ describe(".app & .dev NFT minting", function () {
           .connect(account1)
           .safeMintDevNFT(
             account1.address,
-            devName.account1 + dev_uri,
             devName.account1
           );
         await expect(
@@ -366,7 +351,6 @@ describe(".app & .dev NFT minting", function () {
             .connect(account1)
             .safeMintAppNFT(
               account1.address,
-              appName.account1 + app_uri,
               appName.account1
             )
         );
@@ -376,7 +360,6 @@ describe(".app & .dev NFT minting", function () {
             .connect(account1)
             .safeMintAppNFT(
               account1.address,
-              appName.account1 + app_uri,
               "secondName"
             )
         ).not.to.be.reverted;
@@ -405,7 +388,6 @@ describe(".app & .dev NFT minting", function () {
           .connect(otherAccount)
           .safeMintDevNFT(
             otherAccount.address,
-            devName.otherAccount + dev_uri,
             devName.otherAccount
           );
         // We use lock.connect() to send a transaction from another account
@@ -414,7 +396,6 @@ describe(".app & .dev NFT minting", function () {
             .connect(otherAccount)
             .safeMintAppNFT(
               otherAccount.address,
-              appName.otherAccount + app_uri,
               appName.owner
             )
         ).to.be.revertedWith("ERC721NameStorage: this Name already in use");
@@ -437,7 +418,6 @@ describe(".app & .dev NFT minting", function () {
           .connect(otherAccount)
           .safeMintDevNFT(
             otherAccount.address,
-            devName.otherAccount + dev_uri,
             devName.otherAccount
           );
 
@@ -446,7 +426,6 @@ describe(".app & .dev NFT minting", function () {
             .connect(otherAccount)
             .safeMintAppNFT(
               otherAccount.address,
-              appName.otherAccount + app_uri,
               "XX"
             )
         ).to.be.revertedWith("Minting of such names is restricted currently");
@@ -469,7 +448,6 @@ describe(".app & .dev NFT minting", function () {
           .connect(otherAccount)
           .safeMintDevNFT(
             otherAccount.address,
-            devName.otherAccount + dev_uri,
             devName.otherAccount
           );
 
@@ -479,7 +457,6 @@ describe(".app & .dev NFT minting", function () {
             .connect(otherAccount)
             .safeMintAppNFT(
               otherAccount.address,
-              appName.otherAccount + app_uri,
               "XX"
             )
         ).not.to.be.reverted;
@@ -504,7 +481,6 @@ describe(".app & .dev NFT minting", function () {
           .connect(otherAccount)
           .safeMintDevNFT(
             otherAccount.address,
-            devName.otherAccount + dev_uri,
             devName.otherAccount
           );
 
@@ -513,7 +489,6 @@ describe(".app & .dev NFT minting", function () {
             .connect(otherAccount)
             .safeMintAppNFT(
               otherAccount.address,
-              appName.otherAccount + app_uri,
               specialdAppNames[1]
             )
         ).to.be.revertedWith("App name reserved");
@@ -537,7 +512,6 @@ describe(".app & .dev NFT minting", function () {
           .connect(otherAccount)
           .safeMintDevNFT(
             otherAccount.address,
-            devName.otherAccount + dev_uri,
             devName.otherAccount
           );
 
@@ -547,7 +521,6 @@ describe(".app & .dev NFT minting", function () {
             .connect(otherAccount)
             .safeMintAppNFT(
               otherAccount.address,
-              appName.otherAccount + app_uri,
               specialdAppNames[1]
             )
         ).not.to.be.reverted;
@@ -576,7 +549,6 @@ describe(".app & .dev NFT minting", function () {
               .connect(otherAccount)
               .safeMintAppNFT(
                 otherAccount.address,
-                appName.otherAccount + app_uri,
                 "mint.domain"
               )
           ).to.be.revertedWith("Subdomain not allowed");

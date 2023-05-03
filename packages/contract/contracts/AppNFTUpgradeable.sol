@@ -43,6 +43,8 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
     bool public mintManyFlag;
     // flag to prevent minting app names from the whitelisted apps
     bool public checkDappNamesListFlag;
+    // (Max)Length of special names
+    uint128 public constant SPL_MAX_LENGTH = 3;
 
     // mapping for storing price of .app NFTs when on sale
     mapping(uint256 => uint256) public priceOf;
@@ -92,21 +94,6 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
         _unpause();
     }
 
-    // checkForSubDomain function is used to check if the provided string is a subdomain or not
-    // the app name should be in the format of "domain.app" and not "subdomain.domain.app"
-    // only owner of domain.app can mint the subdomain.domain.app
-    function checkForSubDomain(string memory appName) internal pure{
-        bytes memory appNameBytes = bytes(appName);
-        uint256 length = appNameBytes.length;
-        for(uint256 i=0; i<length-4; i++){
-            if(appNameBytes[i] == '.'){
-                revert("Subdomain not allowed");
-            }
-        }
-    }
-
-
-
     function mint(address to, string memory uri, string memory validatedAppName) internal {
         uint256 tokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
@@ -129,7 +116,7 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
         }
 
         string memory validatedAppName = _validateName(appName);
-        if (bytes(validatedAppName).length < 8) {
+        if (bytes(validatedAppName).length <= SPL_MAX_LENGTH+suffixLength) {
             require(mintSpecialFlag, "Minting of such names is restricted currently");
         }
 
@@ -140,10 +127,9 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
      * @notice mints new .app NFT
      * @dev checks validations for app name and emit AppNameSet event on successful minting
      * @param to the address to mint the token to
-     * @param uri the uri to set for the token
      * @param appName the name of app to set for the token
      */
-    function safeMintAppNFT(address to, string memory uri, string calldata appName) external whenNotPaused {
+    function safeMintAppNFT(address to, string calldata appName) external whenNotPaused {
         if(checkDappNamesListFlag){
             require(!dappNameListAddress.isAppNameAvailable(appName), "App name reserved");
         }
@@ -152,13 +138,11 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
         }
 
         string memory validatedAppName = _validateName(appName);
-        if (bytes(validatedAppName).length < 8) {
+        if (bytes(validatedAppName).length <= SPL_MAX_LENGTH+suffixLength) {
             require(mintSpecialFlag, "Minting of such names is restricted currently");
         }
 
-        checkForSubDomain(validatedAppName);
-
-        mint(to, uri, validatedAppName);
+        mint(to, "", validatedAppName);
     }
 
     /**
@@ -205,8 +189,8 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
     }
 
     /**
-     * @notice toggles the checkDappNamesListFlag by onlyOwner
-     * @dev this flag is used to check if the app name's length is valid ie more than 3
+     * @notice toggles the mintSpecialFlag by onlyOwner
+     * @dev this flag is used to check if the app name's length is valid ie more than SPL_MAX_LENGTH
      * @param _mintSpecialFlag bool value to set the flag
      */
     function setMintSpecialFlag(bool _mintSpecialFlag) external onlyOwner {

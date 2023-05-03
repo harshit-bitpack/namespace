@@ -96,13 +96,12 @@ contract DevNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
      * @notice mints new .dev NFT
      * @dev checks validations for dev name and emits DevNameSet event on successful mint
      * @param to the address to mint the token to
-     * @param uri the uri to set for the token
      * @param devName the name of dev to set for the token
      */
-    function safeMintDevNFT(address to, string memory uri, string calldata devName) external whenNotPaused {
+    function safeMintDevNFT(address to, string calldata devName) external whenNotPaused {
         require(balanceOf(to)==0, "provided wallet already used to create app");
         string memory validatedDevName = _validateName(devName);
-        mint(to, uri, validatedDevName);
+        mint(to, "", validatedDevName);
     }
 
     /**

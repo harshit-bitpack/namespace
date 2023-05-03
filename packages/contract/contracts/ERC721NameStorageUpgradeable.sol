@@ -10,6 +10,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 abstract contract ERC721NameStorageUpgradeable is Initializable, ERC721Upgradeable {
     function __ERC721NameStorage_init(string memory suffix_) internal onlyInitializing {
         nameSuffix = bytes(suffix_);
+        suffixLength = uint128(nameSuffix.length);
     }
 
     function __ERC721NameStorage_init_unchained() internal onlyInitializing {
@@ -22,6 +23,7 @@ abstract contract ERC721NameStorageUpgradeable is Initializable, ERC721Upgradeab
     mapping(string => uint256) private _tokenIdForNames;
     // storing the suffix of the name
     bytes public nameSuffix;
+    uint128 public suffixLength;
 
     function tokensName(uint256 tokenId) public view virtual returns (string memory) {
         _requireMinted(tokenId);
@@ -34,26 +36,49 @@ abstract contract ERC721NameStorageUpgradeable is Initializable, ERC721Upgradeab
         return _tokenId;
     }
 
+    function checkForSubDomain(string memory name) internal virtual{
+        bytes memory nameBytes = bytes(name);
+        uint256 length = nameBytes.length;
+        for(uint256 i=0; i<length-suffixLength; i++){
+            if(nameBytes[i] == '.'){
+                revert("Subdomain not allowed");
+            }
+        }
+    }
+
     /**
-     * @dev Validates `_name` and returns a valid Name ie(should end with nameSuffix)
+     * @dev Validates `str` and returns a valid Name ie(should end with nameSuffix)
+     * @dev by appending the suffix to the name if not present and reverts if only nameSuffix is passed as str
      *
      * Requirements:
      *
-     * - `_name` must be valid.
+     * - `str` must be valid.
      */
     function _validateName(string calldata str) internal virtual returns (string memory) {
         bytes calldata strBytes = bytes(str);
-        if (strBytes.length < 4) {
-            return string(abi.encodePacked(string(strBytes),string(nameSuffix)));
+
+        // if length of string is less than suffix length then append nameSuffix and return the valid name
+        if (strBytes.length < suffixLength) {
+            string memory validName = string(abi.encodePacked(string(strBytes),string(nameSuffix)));
+            checkForSubDomain(validName);
+            return validName;
         }
         uint256 strBytesLength = strBytes.length;
-        bytes memory strBytesSuffix = strBytes[strBytesLength-4:strBytesLength];
-        if(strBytes.length == 4 && keccak256(strBytesSuffix) == keccak256(nameSuffix)){
+        // get the last characters of the name
+        bytes memory strBytesSuffix = strBytes[strBytesLength-suffixLength:strBytesLength];
+
+        // if str length equals name suffix length & the last characters of the name is equal to nameSuffix then revert else 
+        // if str length is greater than name suffix length & last characters are nameSuffix then the str is already suffixed else
+        // if the last characters of the name is not equal to nameSuffix then append nameSuffix and return the valid name
+        if(strBytes.length == suffixLength && keccak256(strBytesSuffix) == keccak256(nameSuffix)){
             revert("ERC721NameStorage: Name not found");
         }else if(keccak256(strBytesSuffix) == keccak256(nameSuffix)){
-           return string(strBytes);
+            checkForSubDomain(str);
+           return str;
         }else{
-            return string(abi.encodePacked(string(strBytes),string(nameSuffix)));
+            string memory validName = string(abi.encodePacked(string(strBytes),string(nameSuffix)));
+            checkForSubDomain(validName);
+            return validName;
         }
     }
 
