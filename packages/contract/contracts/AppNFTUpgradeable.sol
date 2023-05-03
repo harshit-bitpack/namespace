@@ -36,7 +36,12 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
     event SaleCreated(uint256 indexed tokenId, uint256 price);
     event UpdatedTokenURI(uint256 indexed tokenId, string uri);
     
-    uint128 public fees;    // fees in Gwei
+    uint128 public trading_fees;    // fees in Gwei
+    uint128 public renew_fees;    // fees in wei
+    uint128 public renew_life;    // timeperiod for which the app name can be renewed by current owner
+    uint128 public token_life;    // timeperiod for which the app name is valid
+
+
     // flag to prevent specific app name length
     bool public mintSpecialFlag;
     // flag to prevent minting multiple app names from one account
@@ -50,6 +55,8 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
     mapping(uint256 => uint256) public priceOf;
     // mapping for storing onSale status of .app NFTs
     mapping(uint256 => bool) public onSale;
+    // mapping for storing expiry timstamp of .app NFTs
+    mapping(uint256 => uint256) public expireOn;
 
     IERC721Upgradeable public devNFTAddress;
     IDappNameList public dappNameListAddress;
@@ -71,11 +78,29 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
         __UUPSUpgradeable_init();
         __ERC721NameStorage_init(".app");
 
-        fees = 2000000000; //2Gwei = 2%;
+        trading_fees = 2000000000; //2Gwei = 2%;
+        renew_fees = 20000000000000000; //in wei
+        token_life = 365 days;
+        renew_life = 30 days;
         devNFTAddress = IERC721Upgradeable(devNFTAddress_);
         dappNameListAddress = IDappNameList(dappNameListAddress_);
         checkDappNamesListFlag=true;
         _tokenIdCounter.increment();//because we want it to start NFT list index from 1 & not 0
+    }
+
+    /**
+     * @dev Throws if token expired
+     */
+    modifier whenNotExpired(uint256 _tokenId) {
+        _checkExpiry(_tokenId);
+        _;
+    }
+
+    /**
+     * @dev Throws if the current timestamp is more than expiry timestamp
+     */
+    function _checkExpiry(uint256 _tokenId) internal view virtual {
+        require(expireOn[_tokenId]>block.timestamp, "Cant continue, Token Expired");
     }
 
     /**
@@ -100,6 +125,7 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
         _safeMint(to, tokenId);
         _setTokenURI(tokenId, uri);
         _setTokensName(tokenId, validatedAppName);
+        expireOn[tokenId] = block.timestamp + token_life;
         emit AppNameSet(to, tokenId, validatedAppName, uri);
     }
 
@@ -146,12 +172,39 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
     }
 
     /**
+     * @notice renews a .app NFT if its expired
+     * @dev checks if tokenID is expired and renews it for 1 year if renew_fees is paid
+     * @param _tokenID the tokenId of the NFT to renew
+     */
+    function renewToken(uint256 _tokenID) external payable whenNotPaused {
+        require(_exists(_tokenID), "Token does not exist");
+        require(msg.sender == _ownerOf(_tokenID), "Not the owner of this tokenId");
+        require(expireOn[_tokenID] < block.timestamp, "Token is not expired yet");
+        require(msg.value >= renew_fees, "Insufficient renew fees");
+        expireOn[_tokenID] = block.timestamp + token_life;
+    }
+
+    /**
+     * @notice to claim the .app NFT by new user if its expired
+     * @dev checks if tokenID is expired and renew_period is also passed and allows new user to claim it
+     * @param _tokenID the tokenId of the NFT to claim
+     */
+    function claimToken(uint256 _tokenID) external payable whenNotPaused {
+        require(_exists(_tokenID), "Token does not exist");
+        require(expireOn[_tokenID] + renew_life < block.timestamp, "Token not available for reMinting yet");
+        require(msg.sender != _ownerOf(_tokenID), "Owner can reMint token");
+        // require(msg.value >= renew_fees, "Insufficient renew fees");
+        _safeTransfer(_ownerOf(_tokenID), msg.sender, _tokenID, "");
+        expireOn[_tokenID] = block.timestamp + token_life;
+    }
+
+    /**
      * @notice creates sale for a .app NFT
      * @dev checks if caller is owner of that NFT and set the price for the NFT
      * @param _tokenID the tokenId of the NFT to set on sale
      * @param _amount the price amount to set for the token
      */
-    function createSale(uint256 _tokenID, uint256 _amount) external {
+    function createSale(uint256 _tokenID, uint256 _amount) external whenNotExpired(_tokenID) {
         require(_amount>0, "Set some amount");
         require(msg.sender == _ownerOf(_tokenID), "Not the owner of this tokenId");
 
@@ -165,7 +218,7 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
      * @dev checks if caller is owner of that NFT and sets the price to 0
      * @param _tokenID the tokenId of the NFT to end sale
      */
-    function endSale(uint256 _tokenID) external {
+    function endSale(uint256 _tokenID) external whenNotExpired(_tokenID) {
         require(msg.sender == _ownerOf(_tokenID), "Not the owner of this tokenId");
 
         priceOf[_tokenID] = 0;
@@ -178,13 +231,13 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
      * @dev on successful buy, transfer the token to the caller and transfer the price to the owner of the token after deducting fees
      * @param _tokenID the tokenId of the NFT to be bought
      */
-    function buyAppNFT(uint256 _tokenID) external payable {
+    function buyAppNFT(uint256 _tokenID) external payable whenNotExpired(_tokenID) {
         uint256 price = priceOf[_tokenID];
         require(msg.value >= price,"Paid less than price");
         require(onSale[_tokenID], "This NFT is not on sale");
         priceOf[_tokenID] = 0;
         onSale[_tokenID] = false;
-        require(payable(_ownerOf(_tokenID)).send(price-price*fees/100000000000),"payment transfer failed");
+        require(payable(_ownerOf(_tokenID)).send(price-price*trading_fees/100000000000),"payment transfer failed");
         _safeTransfer( _ownerOf(_tokenID),msg.sender,_tokenID,"");
     }
 
@@ -217,24 +270,33 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
 
 
     /**
-     * @notice set platform fees for the sale of .app NFT
+     * @notice set platform trading_fees for the sale of .app NFT
      * @dev this is the fees deducted whenever a sale is completed by the buyer
-     * @param _fees uint128 value which is fees in percentage (add 10^9)
+     * @param _new_trading_fees uint128 value which is fees in percentage (add 10^9)
      */
-    function setFees(uint128 _fees) external onlyOwner {
-        fees = _fees;
+    function setTradingFees(uint128 _new_trading_fees) external onlyOwner {
+        trading_fees = _new_trading_fees;
+    }
+
+    /**
+     * @notice set platform renew_fees for the sale of .app NFT
+     * @dev this is the fees taken to renew the expired .app NFT
+     * @param _new_renew_fees uint128 value which is fees in percentage (add 10^9)
+     */
+    function setRenewFees(uint128 _new_renew_fees) external onlyOwner {
+        renew_fees = _new_renew_fees;
     }
 
     /**
      * @notice updates the tokenURI for the given token ID
      * @dev checks that the caller is the owner or approved for the token and emits an UpdatedTokenURI event after URI update
-     * @param _tokenId uint256 token ID to update the URI for
+     * @param _tokenID uint256 token ID to update the URI for
      * @param _tokenURI string URI to set for the given token ID
      */
-    function updateTokenURI(uint256 _tokenId, string memory _tokenURI) external {
-        require(_isApprovedOrOwner(msg.sender, _tokenId), "ERC721: caller is not owner nor approved");
-        _setTokenURI(_tokenId, _tokenURI);
-        emit UpdatedTokenURI(_tokenId, _tokenURI);
+    function updateTokenURI(uint256 _tokenID, string memory _tokenURI) external whenNotExpired(_tokenID) {
+        require(_isApprovedOrOwner(msg.sender, _tokenID), "ERC721: caller is not owner nor approved");
+        _setTokenURI(_tokenID, _tokenURI);
+        emit UpdatedTokenURI(_tokenID, _tokenURI);
     }
 
     /**

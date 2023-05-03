@@ -141,9 +141,11 @@ contract AppStoreNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enume
      * @param _appStoreTokenId the appStore token ID to block the app for
      * @param _appTokenId the app token ID to block
      */
-    function blockApp(uint256 _appStoreTokenId, uint256 _appTokenId) external {
+    function blockApp(uint256 _appStoreTokenId, uint256[] memory _appTokenId) external {
         require(_isApprovedOrOwner(msg.sender, _appStoreTokenId), "ERC721: function caller is not owner nor approved");
-        isBlocked[_appStoreTokenId][_appTokenId] = true;
+        for(uint64 i = 0; i < _appTokenId.length; i++){
+            isBlocked[_appStoreTokenId][_appTokenId[i]] = true;
+        }
     }
 
     /**
@@ -152,9 +154,11 @@ contract AppStoreNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enume
      * @param _appStoreTokenId the appStore token ID to block the app for
      * @param _appTokenId the app token ID to block
      */
-    function unBlockApp(uint256 _appStoreTokenId, uint256 _appTokenId) external {
+    function unBlockApp(uint256 _appStoreTokenId, uint256[] memory _appTokenId) external {
         require(_isApprovedOrOwner(msg.sender, _appStoreTokenId), "ERC721: function caller is not owner nor approved");
-        isBlocked[_appStoreTokenId][_appTokenId] = false;
+        for(uint64 i = 0; i < _appTokenId.length; i++){
+            isBlocked[_appStoreTokenId][_appTokenId[i]] = false;
+        }
     }
 
     /**
