@@ -7,7 +7,8 @@ import { useForm } from "react-hook-form";
 
 export default function AppEdit({ appName }: { appName: string }) {
   const { metadata, isMetaLoading } = useFetchMetadata(appName);
-  const { register, handleSubmit, getValues, resetField, watch } = useForm();
+  const { register, handleSubmit, getValues, resetField, watch, setValue } =
+    useForm();
   return (
     <>
       {/* {isMetaLoading && (
@@ -45,6 +46,7 @@ export default function AppEdit({ appName }: { appName: string }) {
             register={register}
             resetField={resetField}
             watch={watch}
+            setValue={setValue}
           />
         </TabsContent>
       </Tabs>

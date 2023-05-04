@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { Input, Button } from "ui";
 
@@ -7,6 +7,7 @@ import Spacer from "@/components/Spacer";
 
 export default function Page() {
   const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState("");
 
   return (
@@ -16,8 +17,7 @@ export default function Page() {
 
       <div className="flex flex-col items-center justify-center max-w-[95%] md:max-w-[80%] lg:max-w-[50%] text-left md:text-center gap-y-4 md:gap-y-12 py-4">
         <h1 className="font-bold text-4xl md:text-7xl">
-          Claim your own <span className="text-blue-500">.dev</span> and{" "}
-          <span className="text-blue-500">.app</span> NFTs
+          Claim your own <span className="text-blue-500">.app</span> NFTs
         </h1>
 
         <h3 className="text-[#475467] text-lg md:text-lg">
@@ -31,14 +31,21 @@ export default function Page() {
             className=""
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                const button = document.getElementById("search-btn");
+                if (button) {
+                  button.click();
+                }
+              }
+            }}
+            ref={inputRef}
           />
           <Button
+            id="search-btn"
             onClick={async () => {
-              await router.push("/app", {
-                query: {
-                  q: search,
-                },
-              });
+              await router.push(`/app/?q=${search}`);
             }}
           >
             Search

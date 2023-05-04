@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/router";
 import { useSDK } from "@thirdweb-dev/react";
@@ -17,7 +17,8 @@ import { ThirdwebSDK } from "@thirdweb-dev/sdk";
 export default function App() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState((router.query.q as string) ?? "");
+  const [search, setSearch] = useState(router.query.q?.toString() ?? "");
+  const inputRef = useRef<HTMLInputElement>(null);
   const [available, setAvailable] = useState<{
     [key: string]: boolean;
   }>();
@@ -54,30 +55,30 @@ export default function App() {
       _available[`${search.replaceAll(".app", "")}.app`] = true;
     }
 
-    try {
-      const data2 = await devContract.call("tokenIdForDevName", [
-        search.replaceAll(".dev", "") + ".dev",
-      ]);
-      _available[`${search.replaceAll(".dev", "")}.dev`] = false;
-    } catch (e) {
-      const err = `${e}`;
-      if (!err.includes("invalid token ID")) {
-        console.error(e);
-      }
-      _available[`${search.replaceAll(".dev", "")}.dev`] = true;
-    }
+    // try {
+    //   const data2 = await devContract.call("tokenIdForDevName", [
+    //     search.replaceAll(".dev", "") + ".dev",
+    //   ]);
+    //   _available[`${search.replaceAll(".dev", "")}.dev`] = false;
+    // } catch (e) {
+    //   const err = `${e}`;
+    //   if (!err.includes("invalid token ID")) {
+    //     console.error(e);
+    //   }
+    //   _available[`${search.replaceAll(".dev", "")}.dev`] = true;
+    // }
 
     setAvailable(_available);
     setLoading(false);
   };
 
-  const isDevAlreadyMinted = async (sdk: ThirdwebSDK): Promise<boolean> => {
-    const devContract = await sdk.getContract(
-      env.NEXT_PUBLIC_DEV_CONTRACT_ADDRESS
-    );
-    const devBalance = await devContract.call("balanceOf", [address]);
-    return devBalance !== 0;
-  };
+  // const isDevAlreadyMinted = async (sdk: ThirdwebSDK): Promise<boolean> => {
+  //   const devContract = await sdk.getContract(
+  //     env.NEXT_PUBLIC_DEV_CONTRACT_ADDRESS
+  //   );
+  //   const devBalance = await devContract.call("balanceOf", [address]);
+  //   return devBalance !== 0;
+  // };
 
   const claimNFT = async (name: string) => {
     const sendTx = async (
@@ -90,11 +91,11 @@ export default function App() {
         const nftType = name.split(".").pop();
 
         if (nftType === "app") {
-          if (await !isDevAlreadyMinted(sdk)) {
-            throw Error(
-              "You don't have any Dev domain. Kindly first claim a Dev domain."
-            );
-          }
+          // if (await !isDevAlreadyMinted(sdk)) {
+          //   throw Error(
+          //     "You don't have any Dev domain. Kindly first claim a Dev domain."
+          //   );
+          // }
 
           const appContract = await sdk.getContract(
             env.NEXT_PUBLIC_APP_CONTRACT_ADDRESS
@@ -123,9 +124,9 @@ export default function App() {
           const data = await tx.send();
           console.log(data);
         } else if (nftType === "dev") {
-          if (await isDevAlreadyMinted(sdk)) {
-            throw Error("You already claimed a Dev Domain");
-          }
+          // if (await isDevAlreadyMinted(sdk)) {
+          //   throw Error("You already claimed a Dev Domain");
+          // }
           const devContract = await sdk.getContract(
             env.NEXT_PUBLIC_DEV_CONTRACT_ADDRESS
           );
@@ -188,8 +189,20 @@ export default function App() {
             className=""
             value={search}
             onChange={(e) => setSearch(e.target.value.replace(/ /g, ""))}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                const button = document.getElementById("search-btn");
+                if (button) {
+                  button.click();
+                }
+              }
+            }}
+            ref={inputRef}
           />
-          <Button onClick={searchNFTs}>Search</Button>
+          <Button id="search-btn" onClick={searchNFTs}>
+            Search
+          </Button>
         </div>
 
         {!available && !loading && (

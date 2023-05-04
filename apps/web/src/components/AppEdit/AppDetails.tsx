@@ -17,7 +17,6 @@ import { countries } from "countries-list";
 import iso6391 from "iso-639-1";
 import Spinner from "../Spinner";
 import { categories, subCategories } from "../../lib/utils";
-
 const AppDetailsRow = ({
   children,
   label,
@@ -62,67 +61,49 @@ export default function AppDetails({
   const [appUrl, setAppUrl] = useState<string>();
   const [repoUrl, setRepoUrl] = useState<string>();
   const [dappId, setDappId] = useState(appName);
-  const [chainIdArr, setChainIdArr] = useState<string[]>([]);
-  const [chainId, setChainId] = useState<string>();
+  const [chainIdArr, setChainIdArr] = useState<number[]>([]);
+  const [chainId, setChainId] = useState<number>();
   const [category, setCategory] = useState<string>();
   const [subCategory, setSubCategory] = useState<string>();
-
-  const addChainId = (newChainId: string) => {
-    setChainIdArr((prev) => {
-      return [...prev, newChainId];
-    });
-  };
   const [contractCounter, setContractCounter] = useState(1);
-  useEffect(() => {
-    if (metadata.chainId) {
-      setChainIdArr(metadata.chainId);
-    }
-  }, [metadata]);
-
   const [contractArr, setContractArr] = useState<
-    { chain: string; contract: string }[]
+    { chain: number; address: string }[]
   >([]);
-  const [contractAddress, setContractAddress] = useState("");
-
-  const addContractAddress = (chainId: string, contract: string) => {
-    if (contractCounter === contractArr.length) {
-      setContractCounter((prevCounter) => {
-        return prevCounter + 1;
-      });
-      return;
-    }
-    if (chainId === undefined || contract.length === 0) {
+  const [contractAddress, setContractAddress] = useState<string>();
+  const [tags, setTags] = useState<string>();
+  const addContractAddress = () => {
+    if (!chainId && !contractAddress) {
       toast.message("Please select an option and enter a value!");
       return;
     }
-    const newItem = {
-      chain: chainId,
-      contract: contract,
-    };
-    setContractArr((prev) => {
-      return [...prev, newItem];
-    });
-    setChainId((prev) => {
-      return undefined;
-    });
-    setContractAddress((prev) => {
-      return "";
-    });
-    setContractCounter((prevCounter) => {
-      return prevCounter + 1;
-    });
+    if (contractAddress) {
+      const newItem = {
+        chain: chainId as number,
+        address: contractAddress,
+      };
+      setContractArr(contractArr.concat(newItem));
+      setContractAddress(undefined);
+    }
+    setChainId(undefined);
+    setChainIdArr([...chainIdArr, chainId as number]);
+    setContractCounter((prevCounter) => prevCounter + 1);
   };
 
   const removeContractAddress = () => {
-    if (contractCounter === contractArr.length) {
-      setContractArr((prev) => {
-        prev.pop();
-        return [...prev];
-      });
+    setChainId(chainIdArr.slice(-1)[0]);
+
+    if (contractArr.length > 0) {
+      const lastContract = contractArr[contractArr.length - 1];
+      setContractAddress(lastContract.address);
+      setContractArr((prev) => prev.slice(0, -1));
     }
-    setContractCounter((prevCounter) => {
-      return prevCounter - 1;
+
+    setChainIdArr((prev) => {
+      const updatedArr = prev.slice(0, -1);
+      return updatedArr;
     });
+
+    setContractCounter((prev) => prev - 1);
   };
 
   const [allowedCountries, setAllowedCountries] = useState<string[]>([]);
@@ -142,6 +123,22 @@ export default function AppDetails({
   const [minimumAge, setMinimumAge] = useState<number>(0);
 
   useEffect(() => {
+    if (metadata.name) {
+      setName(metadata.name);
+    }
+
+    if (metadata.description) {
+      setDescription(metadata.description);
+    }
+
+    if (metadata.appUrl) {
+      setAppUrl(metadata.appUrl);
+    }
+
+    if (metadata.repoUrl) {
+      setRepoUrl(metadata.repoUrl);
+    }
+
     if (metadata.category) {
       setCategory(metadata.category);
     }
@@ -157,15 +154,17 @@ export default function AppDetails({
     if (metadata.minimumAge) {
       setMinimumAge(metadata.minimumAge);
     }
+
+    if (metadata.version) {
+      setVersion(metadata.version);
+    }
   }, [metadata]);
 
   const [version, setVersion] = useState<string>();
 
-  const [tags, setTags] = useState<string[]>([]);
-
   useEffect(() => {
     if (metadata.tags) {
-      setTags(metadata.tags);
+      setTags(metadata.tags.join(","));
     }
   }, [metadata]);
 
@@ -194,6 +193,11 @@ export default function AppDetails({
     }));
   }
 
+  let chainOptions = [
+    { label: "Ethereum", value: 1 },
+    { label: "Polygon", value: 137 },
+  ];
+
   return (
     <div className="flex flex-col items-center justify-start w-full rounded-lg bg-white shadow-[0_20_20_60_#0000000D] overflow-hidden">
       {isMetaLoading && (
@@ -213,7 +217,7 @@ export default function AppDetails({
           <AppDetailsRow label="Name" isRequired>
             <Input
               placeholder={"Enter a name"}
-              value={metadata.name ?? name}
+              value={name}
               onChange={(e) => setName(e.target.value)}
               required
             />
@@ -225,7 +229,7 @@ export default function AppDetails({
           >
             <Textarea
               placeholder={"Enter a description"}
-              value={metadata.description ?? description}
+              value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
           </AppDetailsRow>
@@ -240,7 +244,7 @@ export default function AppDetails({
               </Label>
               <Input
                 placeholder={"https://bitpack.me"}
-                value={metadata.appUrl ?? appUrl}
+                value={appUrl}
                 onChange={(e) => setAppUrl(e.target.value)}
               />
             </div>
@@ -248,7 +252,7 @@ export default function AppDetails({
               <Label>Repo URL</Label>
               <Input
                 placeholder={"https://github.com/bitpack.me"}
-                value={metadata.repoUrl ?? repoUrl}
+                value={repoUrl}
                 onChange={(e) => setRepoUrl(e.target.value)}
               />
             </div>
@@ -260,30 +264,40 @@ export default function AppDetails({
             {Array.from(Array(contractCounter)).map((counter, i) => {
               return (
                 <div key={counter} className="flex flex-col gap-y-3">
-                  <div className="flex flex-col gap-y-2">
-                    <Label>Chain ID</Label>
-                    <Select
-                      onValueChange={(v) => {
-                        setChainId(v as any);
-                      }}
-                      value={contractArr[i] ? contractArr[i].chain : chainId}
-                      disabled={contractArr[i] ? true : false}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Chain ID" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">Ethereum</SelectItem>
-                        <SelectItem value="137">Polygon</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <Label>
+                    Chain ID
+                    <span className="text-red-500">*</span>
+                  </Label>
+                  <ReactSelect
+                    options={chainOptions.filter(
+                      (x) => !chainIdArr.includes(x.value)
+                    )}
+                    isDisabled={
+                      i === chainOptions.length
+                        ? true
+                        : chainIdArr[i]
+                        ? true
+                        : false
+                    }
+                    isClearable
+                    onChange={(selectedChain) => {
+                      if (selectedChain) {
+                        setChainId(selectedChain.value);
+                      }
+                    }}
+                  />
                   <div className="flex flex-col gap-y-2">
                     <Label>Contract</Label>
                     <Input
-                      placeholder={metadata.contractAddress ?? "000x"}
+                      placeholder={"000x"}
                       onChange={(e) => setContractAddress(e.target.value)}
-                      disabled={contractArr[i] ? true : false}
+                      disabled={
+                        i === chainOptions.length
+                          ? true
+                          : chainIdArr[i]
+                          ? true
+                          : false
+                      }
                     />
                   </div>
                 </div>
@@ -292,18 +306,19 @@ export default function AppDetails({
 
             <div className="flex flex-row gap-x-3">
               <Button
-                onClick={() =>
-                  addContractAddress(chainId as string, contractAddress)
-                }
+                disabled={contractCounter === chainOptions.length + 1}
+                onClick={() => {
+                  addContractAddress();
+                }}
               >
                 Add
               </Button>
               <Button
                 onClick={() => removeContractAddress()}
                 variant={"outline"}
-                disabled={contractCounter === 0}
+                disabled={contractCounter === 1}
               >
-                {contractCounter === 1 ? "Clear" : "Cancel"}
+                Cancel
               </Button>
             </div>
             <div></div>
@@ -455,39 +470,58 @@ export default function AppDetails({
               </Label>
               <Input
                 placeholder={"version"}
-                value={metadata.version ?? version}
+                value={version}
                 onChange={(e) => setVersion(e.target.value)}
               />
             </div>
             <div className="flex flex-col gap-y-2">
               <Label>Tags</Label>
-              <Textarea placeholder="" />
+              <Textarea
+                placeholder="Add multiple tags with comma seperated"
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+              />
             </div>
           </AppDetailsRow>
 
           <div className="w-full flex flex-row justify-end gap-x-4">
             <Button variant="outline">Cancel</Button>
             <Button
-              // disabled={isMetaLoading || saving}
+              disabled={saving}
               onClick={async () => {
                 if (!storage || !sdk) return;
 
                 setSaving(true);
 
+                if (chainId && contractAddress) {
+                  toast.message("Add ChainId and Contract");
+                  setSaving(false);
+                  return;
+                }
+
+                if (chainId) {
+                  toast.message("Add ChainId");
+                  setSaving(false);
+                  return;
+                }
+
                 if (!name && !metadata.name) {
                   toast.message("Name is required");
+                  setSaving(false);
                   return;
                 }
                 metadata.name = name;
 
                 if (!description && !metadata.description) {
                   toast.message("Description is required");
+                  setSaving(false);
                   return;
                 }
                 metadata.description = description;
 
                 if (!appUrl && !metadata.appUrl) {
                   toast.message("URL is required");
+                  setSaving(false);
                   return;
                 }
                 metadata.appUrl = appUrl;
@@ -500,9 +534,12 @@ export default function AppDetails({
                   metadata.dappId = dappId;
                 }
 
-                // if (chainId) {
-                //   newMetadata.chainId = chainId;
-                // }
+                if (chainIdArr.length <= 0) {
+                  toast.message("Select Chain ID");
+                  setSaving(false);
+                  return;
+                }
+                metadata.chains = chainIdArr;
 
                 if (contractArr) {
                   metadata.contractAddress = contractArr;
@@ -512,6 +549,7 @@ export default function AppDetails({
                 metadata.deniedCountries = deniedCountries;
                 if (!category && !metadata.category) {
                   toast.message("Category is required");
+                  setSaving(false);
                   return;
                 }
                 metadata.category = category;
@@ -522,6 +560,7 @@ export default function AppDetails({
 
                 if (!language && !metadata.language) {
                   toast.message("Language is required");
+                  setSaving(false);
                   return;
                 }
                 metadata.language = language;
@@ -529,12 +568,15 @@ export default function AppDetails({
 
                 if (!version && !metadata.version) {
                   toast.message("Version is required");
+                  setSaving(false);
                   return;
                 }
                 metadata.version = version;
                 if (tags) {
-                  metadata.tags = tags;
+                  metadata.tags = tags.split(/[, ]+/).map((tag) => tag.trim());
                 }
+
+                toast.message("Successfully saved data");
                 setSaving(false);
               }}
             >
