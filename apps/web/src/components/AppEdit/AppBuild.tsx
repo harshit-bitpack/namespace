@@ -13,6 +13,7 @@ import {
   Label,
   Button,
   Checkbox,
+  DatePicker,
 } from "ui";
 
 type checkboxState = {
@@ -21,12 +22,21 @@ type checkboxState = {
   ios: boolean;
 };
 
+type toggleDateAndWalletFileds = {
+  hasWalletConnect: boolean;
+  isListedInRegistry: boolean;
+};
+
 type AndroidState = {
   minVersion: string | undefined;
   architecture: string | undefined;
   screenDpi: string | undefined;
   apk: File | undefined;
   id: string;
+  walletConnectVersion: string | undefined;
+  packageId: string | undefined;
+  versionCode: string | undefined;
+  dateListedInRegistry: Date | undefined;
 };
 
 type IosState = {
@@ -35,6 +45,10 @@ type IosState = {
   screenDpi: string | undefined;
   ipa: File | undefined;
   id: string;
+  walletConnectVersion: string | undefined;
+  packageId: string | undefined;
+  versionCode: string | undefined;
+  dateListedInRegistry: Date | undefined;
 };
 
 const AppBuildRow = ({
@@ -80,94 +94,259 @@ const AppUploadContainer = ({
     newState: AndroidState | IosState
   ) => void;
   app: string;
-}) => (
-  <>
-    <div className="flex items-center justify-center w-full">
-      <label
-        htmlFor={`dropzone-file-${platformState.id}`}
-        className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600"
-      >
-        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-          <svg
-            aria-hidden="true"
-            className="w-10 h-10 mb-3 text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-            ></path>
-          </svg>
-          <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
-            <span className="font-semibold">Click to upload</span> or drag and
-            drop
-          </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            {app === "android" ? "APK" : "IPA"}
-          </p>
+}) => {
+  const [showFileds, setShowFields] = useState<toggleDateAndWalletFileds>({
+    hasWalletConnect: false,
+    isListedInRegistry: false,
+  });
+
+  const toggleDateAndWalletFileds = (type: keyof toggleDateAndWalletFileds) => {
+    setShowFields((prevState) => ({
+      ...prevState,
+      [type]: !prevState[type],
+    }));
+  };
+
+  const handleDateChange = (date: Date) => {
+    // Do something with the selected date, e.g., update the state or call a function
+    console.log("Selected date:", date);
+    const newState = {
+      ...platformState,
+      dateListedInRegistry: date,
+    };
+    handlePlatformStateChange(
+      app as "android" | "ios",
+      platformState.id,
+      newState
+    );
+  };
+
+  return (
+    <>
+      <div className="flex items-center justify-center w-full">
+        <label
+          htmlFor={`dropzone-file-${platformState.id}`}
+          className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600"
+        >
+          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+            <svg
+              aria-hidden="true"
+              className="w-10 h-10 mb-3 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+              ></path>
+            </svg>
+            <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
+              <span className="font-semibold">Click to upload</span> or drag and
+              drop
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {app === "android" ? "APK" : "IPA"}
+            </p>
+          </div>
+          <input
+            id={`dropzone-file-${platformState.id}`}
+            type="file"
+            accept={app === "android" ? ".apk" : ".ipa"}
+            className="hidden"
+            onChange={(e) => {
+              if (!e.target.files || !e.target.files[0]) return;
+              if (app === "android") {
+                const newState = {
+                  ...platformState,
+                  apk: e.target.files[0],
+                };
+                handlePlatformStateChange(
+                  app as "android" | "ios",
+                  platformState.id,
+                  newState
+                );
+                e.target.value = "";
+              } else {
+                const newState = {
+                  ...platformState,
+                  ipa: e.target.files[0],
+                };
+                handlePlatformStateChange(
+                  app as "android" | "ios",
+                  platformState.id,
+                  newState
+                );
+                e.target.value = "";
+              }
+            }}
+          />
+        </label>
+      </div>
+      {platformState?.apk && (
+        <div className="w-full h-full justify-center border border-[#2678FD] rounded-lg p-4 flex flex-col gap-y-3">
+          <div className="flex flex-row items-center justify-between">
+            <div className="flex flex-row gap-x-2 w-[80%]">
+              <div className="w-8 h-8 bg-[#EDF4FF] rounded-full flex items-center justify-center">
+                <File className="w-4 h-4 text-[#2678FD]" />
+              </div>
+
+              <div className="flex flex-col gap-y-1 w-[70%]">
+                <p className="font-medium text-sm truncate">
+                  {platformState.apk.name}
+                </p>
+                <p className="text-sm text-[#475467]">
+                  {(platformState.apk.size / 1024 / 1024).toFixed(2)}
+                  MB
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                const newState = {
+                  ...platformState,
+                  apk: undefined,
+                };
+                handlePlatformStateChange(
+                  app as "android" | "ios",
+                  platformState.id,
+                  newState
+                );
+              }}
+              className="ease-in-out transition-all active:scale-90"
+            >
+              <Trash className="h-4 w-4 text-[#667085]" />
+            </button>
+          </div>
         </div>
-        <input
-          id={`dropzone-file-${platformState.id}`}
-          type="file"
-          accept={app === "android" ? ".apk" : ".ipa"}
-          className="hidden"
+      )}
+      {platformState?.ipa && (
+        <div className="w-full h-full justify-center border border-[#2678FD] rounded-lg p-4 flex flex-col gap-y-3">
+          <div className="flex flex-row items-center justify-between">
+            <div className="flex flex-row gap-x-2 w-[80%]">
+              <div className="w-8 h-8 bg-[#EDF4FF] rounded-full flex items-center justify-center">
+                <File className="w-4 h-4 text-[#2678FD]" />
+              </div>
+
+              <div className="flex flex-col gap-y-1 w-[70%]">
+                <p className="font-medium text-sm truncate">
+                  {platformState.ipa.name}
+                </p>
+                <p className="text-sm text-[#475467]">
+                  {(platformState.ipa.size / 1024 / 1024).toFixed(2)}
+                  MB
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                const newState = {
+                  ...platformState,
+                  ipa: undefined,
+                };
+                handlePlatformStateChange(
+                  app as "android" | "ios",
+                  platformState.id,
+                  newState
+                );
+              }}
+              className="ease-in-out transition-all active:scale-90"
+            >
+              <Trash className="h-4 w-4 text-[#667085]" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      <br />
+
+      <div className="flex flex-row gap-x-2 w-full">
+        <div className="flex flex-col gap-y-2 w-[50%]">
+          <Label>Architecture</Label>
+          <Select
+            onValueChange={(v) => {
+              const newState = {
+                ...platformState,
+                architecture: v as any,
+              };
+              handlePlatformStateChange(
+                app as "android" | "ios",
+                platformState.id,
+                newState
+              );
+            }}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select architecture" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-y-2 w-[50%]">
+          <Label>Screen DPI</Label>
+          <Select
+            onValueChange={(v) => {
+              const newState = {
+                ...platformState,
+                screenDpi: v as any,
+              };
+              handlePlatformStateChange(
+                app as "android" | "ios",
+                platformState.id,
+                newState
+              );
+            }}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select screen DPI" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="flex flex-col gap-y-2">
+        <Label>
+          {`Minimum Version`}
+          <span className="text-red-500">*</span>
+        </Label>
+        <Input
+          placeholder="10.0.0"
+          required
+          value={platformState.minVersion}
           onChange={(e) => {
-            if (!e.target.files || !e.target.files[0]) return;
-            if (app === "android") {
-              const newState = {
-                ...platformState,
-                apk: e.target.files[0],
-              };
-              handlePlatformStateChange(
-                app as "android" | "ios",
-                platformState.id,
-                newState
-              );
-              e.target.value = "";
-            } else {
-              const newState = {
-                ...platformState,
-                ipa: e.target.files[0],
-              };
-              handlePlatformStateChange(
-                app as "android" | "ios",
-                platformState.id,
-                newState
-              );
-              e.target.value = "";
-            }
+            const newState = {
+              ...platformState,
+              minVersion: e.target.value,
+            };
+            handlePlatformStateChange(
+              app as "android" | "ios",
+              platformState.id,
+              newState
+            );
           }}
         />
-      </label>
-    </div>
-    {platformState?.apk && (
-      <div className="w-full h-full justify-center border border-[#2678FD] rounded-lg p-4 flex flex-col gap-y-3">
-        <div className="flex flex-row items-center justify-between">
-          <div className="flex flex-row gap-x-2 w-[80%]">
-            <div className="w-8 h-8 bg-[#EDF4FF] rounded-full flex items-center justify-center">
-              <File className="w-4 h-4 text-[#2678FD]" />
-            </div>
-
-            <div className="flex flex-col gap-y-1 w-[70%]">
-              <p className="font-medium text-sm truncate">
-                {platformState.apk.name}
-              </p>
-              <p className="text-sm text-[#475467]">
-                {(platformState.apk.size / 1024 / 1024).toFixed(2)}
-                MB
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => {
+      </div>
+      <div className="flex flex-row gap-x-2 w-full">
+        <div className="flex flex-col gap-y-2 w-[50%]">
+          <Label>
+            {`Package ID`}
+            <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            //placeholder="10.0.0"
+            required
+            value={platformState.packageId}
+            onChange={(e) => {
               const newState = {
                 ...platformState,
-                apk: undefined,
+                packageId: e.target.value,
               };
               handlePlatformStateChange(
                 app as "android" | "ios",
@@ -175,36 +354,21 @@ const AppUploadContainer = ({
                 newState
               );
             }}
-            className="ease-in-out transition-all active:scale-90"
-          >
-            <Trash className="h-4 w-4 text-[#667085]" />
-          </button>
+          />
         </div>
-      </div>
-    )}
-    {platformState?.ipa && (
-      <div className="w-full h-full justify-center border border-[#2678FD] rounded-lg p-4 flex flex-col gap-y-3">
-        <div className="flex flex-row items-center justify-between">
-          <div className="flex flex-row gap-x-2 w-[80%]">
-            <div className="w-8 h-8 bg-[#EDF4FF] rounded-full flex items-center justify-center">
-              <File className="w-4 h-4 text-[#2678FD]" />
-            </div>
-
-            <div className="flex flex-col gap-y-1 w-[70%]">
-              <p className="font-medium text-sm truncate">
-                {platformState.ipa.name}
-              </p>
-              <p className="text-sm text-[#475467]">
-                {(platformState.ipa.size / 1024 / 1024).toFixed(2)}
-                MB
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => {
+        <div className="flex flex-col gap-y-2 w-[50%]">
+          <Label>
+            {`Version Code`}
+            <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            //placeholder="10.0.0"
+            required
+            value={platformState.versionCode}
+            onChange={(e) => {
               const newState = {
                 ...platformState,
-                ipa: undefined,
+                versionCode: e.target.value,
               };
               handlePlatformStateChange(
                 app as "android" | "ios",
@@ -212,89 +376,68 @@ const AppUploadContainer = ({
                 newState
               );
             }}
-            className="ease-in-out transition-all active:scale-90"
-          >
-            <Trash className="h-4 w-4 text-[#667085]" />
-          </button>
+          />
         </div>
       </div>
-    )}
-
-    <br />
-
-    <div className="flex flex-row gap-x-2 w-full">
-      <div className="flex flex-col gap-y-2 w-[50%]">
-        <Label>Architecture</Label>
-        <Select
-          onValueChange={(v) => {
-            const newState = {
-              ...platformState,
-              architecture: v as any,
-            };
-            handlePlatformStateChange(
-              app as "android" | "ios",
-              platformState.id,
-              newState
-            );
-          }}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select architecture" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="flex flex-row gap-x-2 w-full">
+        <div className="flex items-center space-x-2 w-[50%]">
+          <Checkbox
+            onClick={(e) => {
+              toggleDateAndWalletFileds("isListedInRegistry");
+            }}
+            checked={showFileds["isListedInRegistry"]}
+            id="registry-check"
+          />
+          <Label htmlFor="registry-check">Listed in registry</Label>
+        </div>
+        {showFileds["isListedInRegistry"] && (
+          <div className="flex flex-col gap-y-2 w-[50%]">
+            <DatePicker onDateChange={handleDateChange} />
+          </div>
+        )}
       </div>
-      <div className="flex flex-col gap-y-2 w-[50%]">
-        <Label>Screen DPI</Label>
-        <Select
-          onValueChange={(v) => {
-            const newState = {
-              ...platformState,
-              screenDpi: v as any,
-            };
-            handlePlatformStateChange(
-              app as "android" | "ios",
-              platformState.id,
-              newState
-            );
-          }}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select screen DPI" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="flex flex-row gap-x-2 w-full">
+        <div className="flex items-center space-x-2 w-[50%]">
+          <Checkbox
+            onClick={(e) => {
+              toggleDateAndWalletFileds("hasWalletConnect");
+            }}
+            checked={showFileds["hasWalletConnect"]}
+            id="wallet-connect-check"
+          />
+          <Label htmlFor="wallet-connect-check">
+            Does your app use wallet connect?
+          </Label>
+        </div>
+        {showFileds["hasWalletConnect"] && (
+          <div className="flex flex-col gap-y-2 w-[50%]">
+            <Select
+              onValueChange={(v) => {
+                const newState = {
+                  ...platformState,
+                  walletConnectVersion: v as any,
+                };
+                handlePlatformStateChange(
+                  app as "android" | "ios",
+                  platformState.id,
+                  newState
+                );
+              }}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select wallet version" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="v1">v1</SelectItem>
+                <SelectItem value="v2">v2</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
-    </div>
-
-    <div className="flex flex-col gap-y-2">
-      <Label>
-        {`Minimum Version`}
-        <span className="text-red-500">*</span>
-      </Label>
-      <Input
-        placeholder="10.0.0"
-        required
-        value={platformState.minVersion}
-        onChange={(e) => {
-          const newState = {
-            ...platformState,
-            minVersion: e.target.value,
-          };
-          handlePlatformStateChange(
-            app as "android" | "ios",
-            platformState.id,
-            newState
-          );
-        }}
-      />
-    </div>
-  </>
-);
+    </>
+  );
+};
 
 export default function AppBuild({
   appName,
@@ -326,6 +469,10 @@ export default function AppBuild({
       screenDpi: "",
       apk: undefined,
       id: uuidv4(),
+      walletConnectVersion: "",
+      packageId: "",
+      versionCode: "",
+      dateListedInRegistry: undefined,
     },
   ]);
   const [ios, setIos] = useState<IosState[]>([
@@ -335,6 +482,10 @@ export default function AppBuild({
       screenDpi: "",
       ipa: undefined,
       id: uuidv4(),
+      walletConnectVersion: "",
+      packageId: "",
+      versionCode: "",
+      dateListedInRegistry: undefined,
     },
   ]);
 
@@ -347,14 +498,21 @@ export default function AppBuild({
   console.log("ios", ios);
 
   const uploadToIpfs = async () => {
-    const androidFiles = android.filter((item) => item.apk && item.minVersion);
-    const iosFiles = ios.filter((item) => item.ipa && item.minVersion);
+    //set more checks for empty required fields
+    const androidFiles = android.filter(
+      (item) =>
+        item.apk && item.minVersion && item.packageId && item.versionCode
+    );
+    const iosFiles = ios.filter(
+      (item) =>
+        item.ipa && item.minVersion && item.packageId && item.versionCode
+    );
 
     if (
       (appType["android"] && androidFiles.length === 0) ||
       (appType["ios"] && iosFiles.length === 0)
     ) {
-      toast.message("Upload the file and provide minimum version");
+      toast.message("Upload the file and fill the the required fields");
       return;
     }
 
@@ -400,6 +558,11 @@ export default function AppBuild({
             minVersion: androidFiles[index].minVersion,
             architecture: androidFiles[index].architecture,
             screenDPI: androidFiles[index].screenDpi,
+            walletConnectVersion: androidFiles[index].walletConnectVersion,
+            packageId: androidFiles[index].packageId,
+            versionCode: androidFiles[index].versionCode,
+            dateListedInRegistry:
+              androidFiles[index].dateListedInRegistry?.toDateString(),
           };
           if (!metadata.downloadBaseUrls) {
             metadata.downloadBaseUrls = [newItem];
@@ -416,6 +579,11 @@ export default function AppBuild({
             minVersion: iosFiles[index].minVersion,
             architecture: iosFiles[index].architecture,
             screenDPI: iosFiles[index].screenDpi,
+            walletConnectVersion: iosFiles[index].walletConnectVersion,
+            packageId: iosFiles[index].packageId,
+            versionCode: iosFiles[index].versionCode,
+            dateListedInRegistry:
+              iosFiles[index].dateListedInRegistry?.toDateString(),
           };
           if (!metadata.downloadBaseUrls) {
             metadata.downloadBaseUrls = [newItem];
@@ -453,6 +621,10 @@ export default function AppBuild({
           screenDpi: "",
           apk: undefined,
           id: uuidv4(),
+          walletConnectVersion: "",
+          packageId: "",
+          versionCode: "",
+          dateListedInRegistry: undefined,
         },
       ]);
     }
@@ -464,6 +636,10 @@ export default function AppBuild({
           screenDpi: "",
           ipa: undefined,
           id: uuidv4(),
+          walletConnectVersion: "",
+          packageId: "",
+          versionCode: "",
+          dateListedInRegistry: undefined,
         },
       ]);
     }
@@ -479,6 +655,10 @@ export default function AppBuild({
           screenDpi: "",
           apk: undefined,
           id: uuidv4(),
+          walletConnectVersion: "",
+          packageId: "",
+          versionCode: "",
+          dateListedInRegistry: undefined,
         },
       ]);
     } else {
@@ -490,6 +670,10 @@ export default function AppBuild({
           screenDpi: "",
           ipa: undefined,
           id: uuidv4(),
+          walletConnectVersion: "",
+          packageId: "",
+          versionCode: "",
+          dateListedInRegistry: undefined,
         },
       ]);
     }
