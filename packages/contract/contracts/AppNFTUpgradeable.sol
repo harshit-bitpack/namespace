@@ -186,16 +186,15 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
 
     /**
      * @notice to claim the .app NFT by new user if its expired
-     * @dev checks if tokenID is expired and renew_period is also passed and allows new user to claim it
+     * @dev checks if tokenID is expired and renew_period is also passed and allows new user to claim it if renew_fees is paid
      * @param _tokenID the tokenId of the NFT to claim
      */
     function claimToken(uint256 _tokenID) external payable whenNotPaused {
         require(_exists(_tokenID), "Token does not exist");
-        require(expireOn[_tokenID] + renew_life < block.timestamp, "Token not available for reMinting yet");
-        require(msg.sender != _ownerOf(_tokenID), "Owner can reMint token");
-        // require(msg.value >= renew_fees, "Insufficient renew fees");
-        _safeTransfer(_ownerOf(_tokenID), msg.sender, _tokenID, "");
+        require(expireOn[_tokenID] + renew_life < block.timestamp, "Token not available for claiming yet");
+        require(msg.value >= renew_fees, "Insufficient renew fees");
         expireOn[_tokenID] = block.timestamp + token_life;
+        _safeTransfer(_ownerOf(_tokenID), msg.sender, _tokenID, "");
     }
 
     /**
