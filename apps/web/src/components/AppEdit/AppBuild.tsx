@@ -1,6 +1,6 @@
 import { useStorageUpload } from "@thirdweb-dev/react";
 import { File, Trash, PlusCircle } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
 import {
@@ -15,6 +15,9 @@ import {
   Checkbox,
   DatePicker,
 } from "ui";
+import Spinner from "../Spinner";
+import { Value } from "@radix-ui/react-select";
+import { platform } from "os";
 
 type checkboxState = {
   android: boolean;
@@ -30,8 +33,9 @@ type toggleDateAndWalletFileds = {
 type AndroidState = {
   minVersion: string | undefined;
   architecture: string | undefined;
-  screenDpi: string | undefined;
+  screenDPI: string | undefined;
   apk: File | undefined;
+  url?: string | undefined;
   id: string;
   walletConnectVersion: string | undefined;
   packageId: string | undefined;
@@ -42,14 +46,27 @@ type AndroidState = {
 type IosState = {
   minVersion: string | undefined;
   architecture: string | undefined;
-  screenDpi: string | undefined;
+  screenDPI: string | undefined;
   ipa: File | undefined;
+  url?: string | undefined;
   id: string;
   walletConnectVersion: string | undefined;
   packageId: string | undefined;
   versionCode: string | undefined;
   dateListedInRegistry: Date | undefined;
 };
+
+type downloadBaseUrlsType = {
+  platform: "android" | "ios" | "web";
+  architecture: string | undefined;
+  dateListedInRegistry: string | undefined;
+  minVersion: string | undefined;
+  packageId: string | undefined;
+  screenDPI: string | undefined;
+  versionCode: string | undefined;
+  walletConnectVersion: string | undefined;
+  url: string | undefined;
+}[];
 
 const AppBuildRow = ({
   children,
@@ -96,8 +113,8 @@ const AppUploadContainer = ({
   app: string;
 }) => {
   const [showFileds, setShowFields] = useState<toggleDateAndWalletFileds>({
-    hasWalletConnect: false,
-    isListedInRegistry: false,
+    hasWalletConnect: platformState.walletConnectVersion ? true : false,
+    isListedInRegistry: platformState.dateListedInRegistry ? true : false,
   });
 
   const toggleDateAndWalletFileds = (type: keyof toggleDateAndWalletFileds) => {
@@ -186,43 +203,45 @@ const AppUploadContainer = ({
           />
         </label>
       </div>
-      {platformState?.apk && (
-        <div className="w-full h-full justify-center border border-[#2678FD] rounded-lg p-4 flex flex-col gap-y-3">
-          <div className="flex flex-row items-center justify-between">
-            <div className="flex flex-row gap-x-2 w-[80%]">
-              <div className="w-8 h-8 bg-[#EDF4FF] rounded-full flex items-center justify-center">
-                <File className="w-4 h-4 text-[#2678FD]" />
-              </div>
+      {platformState?.apk ||
+        (platformState?.url && (
+          <div className="w-full h-full justify-center border border-[#2678FD] rounded-lg p-4 flex flex-col gap-y-3">
+            <div className="flex flex-row items-center justify-between">
+              <div className="flex flex-row gap-x-2 w-[80%]">
+                <div className="w-8 h-8 bg-[#EDF4FF] rounded-full flex items-center justify-center">
+                  <File className="w-4 h-4 text-[#2678FD]" />
+                </div>
 
-              <div className="flex flex-col gap-y-1 w-[70%]">
-                <p className="font-medium text-sm truncate">
-                  {platformState.apk.name}
-                </p>
-                <p className="text-sm text-[#475467]">
-                  {(platformState.apk.size / 1024 / 1024).toFixed(2)}
-                  MB
-                </p>
+                <div className="flex flex-col gap-y-1 w-[70%]">
+                  <p className="font-medium text-sm truncate">
+                    {platformState?.apk?.name ?? "uploaded apk file"}
+                  </p>
+                  <p className="text-sm text-[#475467]">
+                    {platformState?.apk &&
+                      `${(platformState.apk.size / 1024 / 1024).toFixed(2)} MB`}
+                  </p>
+                </div>
               </div>
+              <button
+                onClick={() => {
+                  const newState = {
+                    ...platformState,
+                    apk: undefined,
+                    url: "",
+                  };
+                  handlePlatformStateChange(
+                    app as "android" | "ios",
+                    platformState.id,
+                    newState
+                  );
+                }}
+                className="ease-in-out transition-all active:scale-90"
+              >
+                <Trash className="h-4 w-4 text-[#667085]" />
+              </button>
             </div>
-            <button
-              onClick={() => {
-                const newState = {
-                  ...platformState,
-                  apk: undefined,
-                };
-                handlePlatformStateChange(
-                  app as "android" | "ios",
-                  platformState.id,
-                  newState
-                );
-              }}
-              className="ease-in-out transition-all active:scale-90"
-            >
-              <Trash className="h-4 w-4 text-[#667085]" />
-            </button>
           </div>
-        </div>
-      )}
+        ))}
       {platformState?.ipa && (
         <div className="w-full h-full justify-center border border-[#2678FD] rounded-lg p-4 flex flex-col gap-y-3">
           <div className="flex flex-row items-center justify-between">
@@ -246,6 +265,7 @@ const AppUploadContainer = ({
                 const newState = {
                   ...platformState,
                   ipa: undefined,
+                  url: "",
                 };
                 handlePlatformStateChange(
                   app as "android" | "ios",
@@ -267,6 +287,7 @@ const AppUploadContainer = ({
         <div className="flex flex-col gap-y-2 w-[50%]">
           <Label>Architecture</Label>
           <Select
+            value={platformState.architecture}
             onValueChange={(v) => {
               const newState = {
                 ...platformState,
@@ -290,10 +311,11 @@ const AppUploadContainer = ({
         <div className="flex flex-col gap-y-2 w-[50%]">
           <Label>Screen DPI</Label>
           <Select
+            value={platformState.screenDPI}
             onValueChange={(v) => {
               const newState = {
                 ...platformState,
-                screenDpi: v as any,
+                screenDPI: v as any,
               };
               handlePlatformStateChange(
                 app as "android" | "ios",
@@ -392,7 +414,10 @@ const AppUploadContainer = ({
         </div>
         {showFileds["isListedInRegistry"] && (
           <div className="flex flex-col gap-y-2 w-[50%]">
-            <DatePicker onDateChange={handleDateChange} />
+            <DatePicker
+              onDateChange={handleDateChange}
+              defaultDate={platformState.dateListedInRegistry}
+            />
           </div>
         )}
       </div>
@@ -412,6 +437,7 @@ const AppUploadContainer = ({
         {showFileds["hasWalletConnect"] && (
           <div className="flex flex-col gap-y-2 w-[50%]">
             <Select
+              value={platformState.walletConnectVersion}
               onValueChange={(v) => {
                 const newState = {
                   ...platformState,
@@ -466,7 +492,7 @@ export default function AppBuild({
     {
       minVersion: "",
       architecture: "",
-      screenDpi: "",
+      screenDPI: "",
       apk: undefined,
       id: uuidv4(),
       walletConnectVersion: "",
@@ -479,7 +505,7 @@ export default function AppBuild({
     {
       minVersion: "",
       architecture: "",
-      screenDpi: "",
+      screenDPI: "",
       ipa: undefined,
       id: uuidv4(),
       walletConnectVersion: "",
@@ -496,6 +522,27 @@ export default function AppBuild({
 
   console.log("andy", android);
   console.log("ios", ios);
+
+  console.log("metadata build", metadata);
+
+  useEffect(() => {
+    if (metadata.downloadBaseUrls.length > 0) {
+      const androidFiles = metadata.downloadBaseUrls.filter(
+        (item: any) => item.platform === "android"
+      );
+      const iosFiles = metadata.downloadBaseUrls.filter(
+        (item: any) => item.platform === "ios"
+      );
+      if (androidFiles.length > 0) {
+        setAndroid(androidFiles);
+        console.log("andimeta", androidFiles);
+      }
+      if (iosFiles.length > 0) {
+        console.log("iosmeta", iosFiles);
+        setIos(iosFiles);
+      }
+    }
+  }, [metadata]);
 
   const uploadToIpfs = async () => {
     //set more checks for empty required fields
@@ -557,7 +604,7 @@ export default function AppBuild({
             platform: "android",
             minVersion: androidFiles[index].minVersion,
             architecture: androidFiles[index].architecture,
-            screenDPI: androidFiles[index].screenDpi,
+            screenDPI: androidFiles[index].screenDPI,
             walletConnectVersion: androidFiles[index].walletConnectVersion,
             packageId: androidFiles[index].packageId,
             versionCode: androidFiles[index].versionCode,
@@ -578,7 +625,7 @@ export default function AppBuild({
             platform: "ios",
             minVersion: iosFiles[index].minVersion,
             architecture: iosFiles[index].architecture,
-            screenDPI: iosFiles[index].screenDpi,
+            screenDPI: iosFiles[index].screenDPI,
             walletConnectVersion: iosFiles[index].walletConnectVersion,
             packageId: iosFiles[index].packageId,
             versionCode: iosFiles[index].versionCode,
@@ -618,7 +665,7 @@ export default function AppBuild({
         {
           minVersion: "",
           architecture: "",
-          screenDpi: "",
+          screenDPI: "",
           apk: undefined,
           id: uuidv4(),
           walletConnectVersion: "",
@@ -633,7 +680,7 @@ export default function AppBuild({
         {
           minVersion: "",
           architecture: "",
-          screenDpi: "",
+          screenDPI: "",
           ipa: undefined,
           id: uuidv4(),
           walletConnectVersion: "",
@@ -652,8 +699,9 @@ export default function AppBuild({
         {
           minVersion: "",
           architecture: "",
-          screenDpi: "",
+          screenDPI: "",
           apk: undefined,
+          url: "",
           id: uuidv4(),
           walletConnectVersion: "",
           packageId: "",
@@ -667,8 +715,9 @@ export default function AppBuild({
         {
           minVersion: "",
           architecture: "",
-          screenDpi: "",
+          screenDPI: "",
           ipa: undefined,
+          url: "",
           id: uuidv4(),
           walletConnectVersion: "",
           packageId: "",
@@ -702,68 +751,76 @@ export default function AppBuild({
   return (
     <div className="flex flex-col items-center justify-start w-full rounded-lg bg-white shadow-[0_20_20_60_#0000000D] overflow-hidden">
       {/* <div className="flex flex-col w-full"> */}
-      <div className="p-4 md:p-8 w-full gap-y-6 flex flex-col">
-        <div className="flex flex-col gap-y-2">
-          <h3 className="text-[#101828] text-2xl font-semibold">Build</h3>
-          <p className="text-[#475467] text-sm">Edit your app build details.</p>
+      {isMetaLoading && (
+        <div className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <Spinner />
         </div>
-
-        <AppBuildRow label="App Type" isRequired>
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              onClick={(e) => {
-                handleCheckboxChange("android");
-              }}
-              checked={appType["android"]}
-              id="android"
-            />
-            <Label htmlFor="android">Android</Label>
+      )}
+      {!isMetaLoading && (
+        <div className="p-4 md:p-8 w-full gap-y-6 flex flex-col">
+          <div className="flex flex-col gap-y-2">
+            <h3 className="text-[#101828] text-2xl font-semibold">Build</h3>
+            <p className="text-[#475467] text-sm">
+              Edit your app build details.
+            </p>
           </div>
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              onClick={(e) => {
-                handleCheckboxChange("web");
-              }}
-              checked={appType["web"]}
-              id="web"
-              disabled
-            />
-            <Label htmlFor="web">Web</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              onClick={(e) => {
-                handleCheckboxChange("ios");
-              }}
-              checked={appType["ios"]}
-              id="ios"
-            />
-            <Label htmlFor="ios">iOS</Label>
-          </div>
-        </AppBuildRow>
 
-        <hr />
-
-        {isAndroid && (
-          <AppBuildRow label="Android">
-            {android.map((androidState, index) => (
-              <AppUploadContainer
-                key={`android-${index}`}
-                platformState={androidState}
-                handlePlatformStateChange={handlePlatformStateChange}
-                app="android"
+          <AppBuildRow label="App Type" isRequired>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                onClick={(e) => {
+                  handleCheckboxChange("android");
+                }}
+                checked={appType["android"]}
+                id="android"
               />
-            ))}
-            <div
-              className="mt-4 underline cursor-pointer"
-              onClick={() => handleAddNewFile("android")}
-            >
-              Add new file
+              <Label htmlFor="android">Android</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                onClick={(e) => {
+                  handleCheckboxChange("web");
+                }}
+                checked={appType["web"]}
+                id="web"
+                disabled
+              />
+              <Label htmlFor="web">Web</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                onClick={(e) => {
+                  handleCheckboxChange("ios");
+                }}
+                checked={appType["ios"]}
+                id="ios"
+              />
+              <Label htmlFor="ios">iOS</Label>
             </div>
           </AppBuildRow>
-        )}
 
-        {/* {isWeb && (
+          <hr />
+
+          {isAndroid && (
+            <AppBuildRow label="Android">
+              {android.map((androidState, index) => (
+                <AppUploadContainer
+                  key={`android-${index}`}
+                  platformState={androidState}
+                  handlePlatformStateChange={handlePlatformStateChange}
+                  app="android"
+                />
+              ))}
+              <div
+                className="mt-4 underline cursor-pointer"
+                onClick={() => handleAddNewFile("android")}
+              >
+                Add new file
+              </div>
+            </AppBuildRow>
+          )}
+
+          {/* {isWeb && (
             <AppBuildRow label="Web App">
               <div className="flex flex-col gap-y-2">
                 <Label>
@@ -787,42 +844,43 @@ export default function AppBuild({
             </AppBuildRow>
           )} */}
 
-        {isIOS && (
-          <AppBuildRow label="iOS">
-            {ios.map((iosState, index) => (
-              <AppUploadContainer
-                key={`ios-${index}`}
-                platformState={iosState}
-                handlePlatformStateChange={handlePlatformStateChange}
-                app="ios"
-              />
-            ))}
-            <div
-              className="mt-4 underline cursor-pointer"
-              onClick={() => handleAddNewFile("ios")}
-            >
-              Add new file
-            </div>
-          </AppBuildRow>
-        )}
+          {isIOS && (
+            <AppBuildRow label="iOS">
+              {ios.map((iosState, index) => (
+                <AppUploadContainer
+                  key={`ios-${index}`}
+                  platformState={iosState}
+                  handlePlatformStateChange={handlePlatformStateChange}
+                  app="ios"
+                />
+              ))}
+              <div
+                className="mt-4 underline cursor-pointer"
+                onClick={() => handleAddNewFile("ios")}
+              >
+                Add new file
+              </div>
+            </AppBuildRow>
+          )}
 
-        <div className="w-full flex flex-row justify-end gap-x-4">
-          <Button
-            onClick={uploadToIpfs}
-            disabled={
-              isSaving ||
-              Object.keys(appType).every(
-                (app) => !appType[app as keyof checkboxState]
-              )
-            }
-          >
-            Save
-          </Button>
-          <Button variant="outline" onClick={clearValues}>
-            Cancel
-          </Button>
+          <div className="w-full flex flex-row justify-end gap-x-4">
+            <Button
+              onClick={uploadToIpfs}
+              disabled={
+                isSaving ||
+                Object.keys(appType).every(
+                  (app) => !appType[app as keyof checkboxState]
+                )
+              }
+            >
+              Save
+            </Button>
+            <Button variant="outline" onClick={clearValues}>
+              Cancel
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
       {/* <div className="flex flex-row justify-end gap-x-4">
           <Button>Save</Button>
           <Button variant={"outline"}>Cancel</Button>

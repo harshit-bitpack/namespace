@@ -30,10 +30,9 @@ export default function Info({ name }: { name: string }) {
 
           <div className="flex flex-col items-center justify-start w-full rounded-lg bg-white shadow-[0_20_20_60_#0000000D] overflow-hidden">
             <div className="bg-[#101828] h-60 w-full" />
-
             <div className="flex flex-row items-center w-full px-4 md:px-8 gap-x-4">
               <Image
-                src="https://picsum.photos/160"
+                src={metadata?.images?.logo ?? "https://picsum.photos/160"}
                 alt={ext === "dev" ? "Dev image" : "App image"}
                 width={160}
                 height={160}
@@ -64,7 +63,7 @@ export default function Info({ name }: { name: string }) {
                 className="disabled md:block"
               >
                 <Button className="bg-green-500 hover:bg-green-600 hidden md:block">
-                  Edit Details
+                  Edit
                 </Button>
               </Link>
             </div>

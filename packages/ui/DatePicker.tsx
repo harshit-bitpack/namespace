@@ -11,13 +11,16 @@ import { Popover, PopoverContent, PopoverTrigger } from "./Popover";
 
 export function DatePicker({
   onDateChange,
+  defaultDate,
 }: {
   onDateChange: (date: Date) => void;
+  defaultDate?: string;
 }) {
-  const [date, setDate] = React.useState<Date>();
-
+  const [date, setDate] = React.useState<Date>(
+    new Date(Date.parse(defaultDate as string)) || new Date()
+  );
   const handleDateChange = (newDate: Date | undefined) => {
-    setDate(newDate);
+    setDate(newDate as Date);
     onDateChange(newDate as Date);
   };
 

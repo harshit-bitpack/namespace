@@ -106,6 +106,16 @@ export default function AppDetails({
     setContractCounter((prev) => prev - 1);
   };
 
+  useEffect(() => {
+    if (metadata.chains && metadata.contractAddress) {
+      const tempChainIdArr = metadata.chains;
+      const tempContractArr = metadata.contractAddress;
+      setChainIdArr(tempChainIdArr);
+      setContractArr(tempContractArr);
+      setContractCounter(tempChainIdArr.length);
+    }
+  }, [metadata]);
+
   const [allowedCountries, setAllowedCountries] = useState<string[]>([]);
   const [deniedCountries, setDeniedCountries] = useState<string[]>([]);
 
@@ -272,6 +282,59 @@ export default function AppDetails({
                     options={chainOptions.filter(
                       (x) => !chainIdArr.includes(x.value)
                     )}
+                    value={
+                      chainIdArr[i]
+                        ? chainOptions.find(
+                            (option) => option.value === chainIdArr[i]
+                          )
+                        : undefined
+                    }
+                    isDisabled={
+                      i === chainOptions.length
+                        ? true
+                        : chainIdArr[i]
+                        ? true
+                        : false
+                    }
+                    isClearable
+                    onChange={(selectedChain) => {
+                      if (selectedChain) {
+                        setChainId(selectedChain.value);
+                      }
+                    }}
+                  />
+                  <div className="flex flex-col gap-y-2">
+                    <Label>Contract</Label>
+                    <Input
+                      placeholder={"000x"}
+                      value={
+                        contractArr[i] ? contractArr[i].address : undefined
+                      }
+                      onChange={(e) => setContractAddress(e.target.value)}
+                      disabled={
+                        i === chainOptions.length
+                          ? true
+                          : chainIdArr[i]
+                          ? true
+                          : false
+                      }
+                    />
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* {Array.from(Array(contractCounter)).map((counter, i) => {
+              return (
+                <div key={counter} className="flex flex-col gap-y-3">
+                  <Label>
+                    Chain ID
+                    <span className="text-red-500">*</span>
+                  </Label>
+                  <ReactSelect
+                    options={chainOptions.filter(
+                      (x) => !chainIdArr.includes(x.value)
+                    )}
                     isDisabled={
                       i === chainOptions.length
                         ? true
@@ -302,7 +365,7 @@ export default function AppDetails({
                   </div>
                 </div>
               );
-            })}
+            })} */}
 
             <div className="flex flex-row gap-x-3">
               <Button

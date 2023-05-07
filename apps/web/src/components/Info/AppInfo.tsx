@@ -176,36 +176,52 @@ export default function AppInfo({ metaData }: { metaData: any }) {
         </h3>
         <Divider />
       </div>
-
       <div className="flex flex-row flex-wrap gap-x-2 gap-y-2">
-        <Image
-          src="https://picsum.photos/157/323"
-          alt="App Screenshot"
-          width={157}
-          height={323}
-          className="rounded-lg border-4 border-white"
-        />
-        <Image
-          src="https://picsum.photos/157/323"
-          alt="App Screenshot"
-          width={157}
-          height={323}
-          className="rounded-lg border-4 border-white"
-        />
-        <Image
-          src="https://picsum.photos/157/323"
-          alt="App Screenshot"
-          width={157}
-          height={323}
-          className="rounded-lg border-4 border-white"
-        />
-        <Image
-          src="https://picsum.photos/157/323"
-          alt="App Screenshot"
-          width={157}
-          height={323}
-          className="rounded-lg border-4 border-white"
-        />
+        {metaData?.images?.screenshots?.length > 0 ? (
+          metaData?.images?.screenshots.map(
+            (screenshot: string, idx: number) => (
+              <Image
+                key={idx}
+                src={screenshot}
+                alt="App Screenshot"
+                width={157}
+                height={323}
+                className="rounded-lg border-4 border-white"
+              />
+            )
+          )
+        ) : (
+          <>
+            <Image
+              src={"https://picsum.photos/157/323"}
+              alt="App Screenshot"
+              width={157}
+              height={323}
+              className="rounded-lg border-4 border-white"
+            />
+            <Image
+              src={"https://picsum.photos/157/323"}
+              alt="App Screenshot"
+              width={157}
+              height={323}
+              className="rounded-lg border-4 border-white"
+            />
+            <Image
+              src={"https://picsum.photos/157/323"}
+              alt="App Screenshot"
+              width={157}
+              height={323}
+              className="rounded-lg border-4 border-white"
+            />
+            <Image
+              src={"https://picsum.photos/157/323"}
+              alt="App Screenshot"
+              width={157}
+              height={323}
+              className="rounded-lg border-4 border-white"
+            />
+          </>
+        )}
       </div>
     </>
   );
