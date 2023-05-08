@@ -63,7 +63,7 @@ export default function Info({ name }: { name: string }) {
                 className="disabled md:block"
               >
                 <Button className="bg-green-500 hover:bg-green-600 hidden md:block">
-                  Edit
+                  Edit Details
                 </Button>
               </Link>
             </div>

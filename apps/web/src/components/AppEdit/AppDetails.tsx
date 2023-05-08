@@ -62,39 +62,16 @@ export default function AppDetails({
   const [repoUrl, setRepoUrl] = useState<string>();
   const [dappId, setDappId] = useState(appName);
   const [chainIdArr, setChainIdArr] = useState<number[]>([]);
-  const [chainId, setChainId] = useState<number>();
+  console.log("chain id arr : ", chainIdArr);
   const [category, setCategory] = useState<string>();
   const [subCategory, setSubCategory] = useState<string>();
   const [contractCounter, setContractCounter] = useState(1);
-  const [contractArr, setContractArr] = useState<
-    { chain: number; address: string }[]
-  >([]);
-  const [contractAddress, setContractAddress] = useState<string>();
+  const [contractArr, setContractArr] = useState<string[]>([]);
+  console.log("contract arr : ", contractArr);
   const [tags, setTags] = useState<string>();
-  const addContractAddress = () => {
-    if (!chainId && !contractAddress) {
-      toast.message("Please select an option and enter a value!");
-      return;
-    }
-    if (contractAddress) {
-      const newItem = {
-        chain: chainId as number,
-        address: contractAddress,
-      };
-      setContractArr(contractArr.concat(newItem));
-      setContractAddress(undefined);
-    }
-    setChainId(undefined);
-    setChainIdArr([...chainIdArr, chainId as number]);
-    setContractCounter((prevCounter) => prevCounter + 1);
-  };
 
   const removeContractAddress = () => {
-    setChainId(chainIdArr.slice(-1)[0]);
-
     if (contractArr.length > 0) {
-      const lastContract = contractArr[contractArr.length - 1];
-      setContractAddress(lastContract.address);
       setContractArr((prev) => prev.slice(0, -1));
     }
 
@@ -109,7 +86,15 @@ export default function AppDetails({
   useEffect(() => {
     if (metadata.chains && metadata.contractAddress) {
       const tempChainIdArr = metadata.chains;
-      const tempContractArr = metadata.contractAddress;
+      const tempContractArr = tempChainIdArr.map((x: number, idx: number) => {
+        const matchingContract = metadata.contractAddress.find(
+          (ele: any) => ele.chain === x
+        );
+        if (!matchingContract) {
+          return;
+        }
+        return matchingContract.address;
+      });
       setChainIdArr(tempChainIdArr);
       setContractArr(tempContractArr);
       setContractCounter(tempChainIdArr.length);
@@ -253,7 +238,7 @@ export default function AppDetails({
                 <span className="text-red-500">*</span>
               </Label>
               <Input
-                placeholder={"https://bitpack.me"}
+                placeholder={"Your website URL here"}
                 value={appUrl}
                 onChange={(e) => setAppUrl(e.target.value)}
               />
@@ -261,7 +246,7 @@ export default function AppDetails({
             <div className="flex flex-col gap-y-2">
               <Label>Repo URL</Label>
               <Input
-                placeholder={"https://github.com/bitpack.me"}
+                placeholder={"Your public URL (if applicable)"}
                 value={repoUrl}
                 onChange={(e) => setRepoUrl(e.target.value)}
               />
@@ -289,92 +274,55 @@ export default function AppDetails({
                           )
                         : undefined
                     }
-                    isDisabled={
-                      i === chainOptions.length
-                        ? true
-                        : chainIdArr[i]
-                        ? true
-                        : false
-                    }
-                    isClearable
                     onChange={(selectedChain) => {
                       if (selectedChain) {
-                        setChainId(selectedChain.value);
+                        setChainIdArr((prev) => {
+                          const updated = [...prev];
+                          if (chainIdArr.length > 0) {
+                            // Update
+                            updated[i] = selectedChain.value;
+                          } else {
+                            // Create
+                            updated.push(selectedChain.value);
+                          }
+                          return updated;
+                        });
                       }
                     }}
                   />
                   <div className="flex flex-col gap-y-2">
                     <Label>Contract</Label>
                     <Input
-                      placeholder={"000x"}
-                      value={
-                        contractArr[i] ? contractArr[i].address : undefined
-                      }
-                      onChange={(e) => setContractAddress(e.target.value)}
-                      disabled={
-                        i === chainOptions.length
-                          ? true
-                          : chainIdArr[i]
-                          ? true
-                          : false
-                      }
+                      placeholder={"0x...."}
+                      value={contractArr[i] ? contractArr[i] : undefined}
+                      onChange={(e) => {
+                        setContractArr((prev) => {
+                          const updated = [...prev];
+                          if (contractArr.length > 0) {
+                            //update
+                            updated[i] = e.target.value;
+                          } else {
+                            // create
+                            updated.push(e.target.value);
+                          }
+                          return updated;
+                        });
+                      }}
+                      disabled={chainIdArr[i] ? false : true}
                     />
                   </div>
                 </div>
               );
             })}
 
-            {/* {Array.from(Array(contractCounter)).map((counter, i) => {
-              return (
-                <div key={counter} className="flex flex-col gap-y-3">
-                  <Label>
-                    Chain ID
-                    <span className="text-red-500">*</span>
-                  </Label>
-                  <ReactSelect
-                    options={chainOptions.filter(
-                      (x) => !chainIdArr.includes(x.value)
-                    )}
-                    isDisabled={
-                      i === chainOptions.length
-                        ? true
-                        : chainIdArr[i]
-                        ? true
-                        : false
-                    }
-                    isClearable
-                    onChange={(selectedChain) => {
-                      if (selectedChain) {
-                        setChainId(selectedChain.value);
-                      }
-                    }}
-                  />
-                  <div className="flex flex-col gap-y-2">
-                    <Label>Contract</Label>
-                    <Input
-                      placeholder={"000x"}
-                      onChange={(e) => setContractAddress(e.target.value)}
-                      disabled={
-                        i === chainOptions.length
-                          ? true
-                          : chainIdArr[i]
-                          ? true
-                          : false
-                      }
-                    />
-                  </div>
-                </div>
-              );
-            })} */}
-
             <div className="flex flex-row gap-x-3">
               <Button
-                disabled={contractCounter === chainOptions.length + 1}
+                disabled={contractCounter === chainOptions.length}
                 onClick={() => {
-                  addContractAddress();
+                  setContractCounter((prevCounter) => prevCounter + 1);
                 }}
               >
-                Add
+                Add More
               </Button>
               <Button
                 onClick={() => removeContractAddress()}
@@ -556,14 +504,8 @@ export default function AppDetails({
 
                 setSaving(true);
 
-                if (chainId && contractAddress) {
-                  toast.message("Add ChainId and Contract");
-                  setSaving(false);
-                  return;
-                }
-
-                if (chainId) {
-                  toast.message("Add ChainId");
+                if (chainIdArr.length === 0) {
+                  toast.message("Chain Id is required");
                   setSaving(false);
                   return;
                 }
@@ -605,7 +547,25 @@ export default function AppDetails({
                 metadata.chains = chainIdArr;
 
                 if (contractArr) {
-                  metadata.contractAddress = contractArr;
+                  const contracts: { chain: number; address: string }[] =
+                    chainIdArr.reduce(
+                      (
+                        acc: { chain: number; address: string }[],
+                        chain: number,
+                        idx: number
+                      ) => {
+                        if (contractArr[idx] && contractArr[idx].length > 0) {
+                          acc.push({
+                            chain: chain,
+                            address: contractArr[idx],
+                          });
+                        }
+                        return acc;
+                      },
+                      []
+                    );
+                  console.log("contracts : ", contracts);
+                  metadata.contractAddress = contracts;
                 }
 
                 metadata.allowedCountries = allowedCountries;
