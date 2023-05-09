@@ -14,7 +14,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
-import "@openzeppelin/contracts/metatx/ERC2771Context.sol";
+import "@opengsn/contracts/src/ERC2771Recipient.sol";
 
 interface IDappNameList {
     function isAppNameAvailable(string memory appName) external view returns (bool);
@@ -28,7 +28,7 @@ interface IDappNameList {
 */
 contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradeable, 
                     ERC721URIStorageUpgradeable, PausableUpgradeable, OwnableUpgradeable, 
-                        ERC721BurnableUpgradeable, UUPSUpgradeable, ERC721NameStorageUpgradeable {
+                        ERC721BurnableUpgradeable, UUPSUpgradeable, ERC721NameStorageUpgradeable, ERC2771Recipient {
     using CountersUpgradeable for CountersUpgradeable.Counter;
 
     CountersUpgradeable.Counter private _tokenIdCounter;
@@ -68,7 +68,7 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
     constructor() {
         _disableInitializers();
     }
-    function initialize(address devNFTAddress_, address dappNameListAddress_) initializer public {
+    function initialize(address devNFTAddress_, address dappNameListAddress_, address trustedForwarder_) initializer public {
         __ERC721_init("appNFT", "appNFT");
         __ERC721Enumerable_init();
         __ERC721URIStorage_init();
@@ -84,6 +84,7 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
         renew_life = 30 days;
         devNFTAddress = IERC721Upgradeable(devNFTAddress_);
         dappNameListAddress = IDappNameList(dappNameListAddress_);
+        _setTrustedForwarder(trustedForwarder_);
         checkDappNamesListFlag=true;
         _tokenIdCounter.increment();//because we want it to start NFT list index from 1 & not 0
     }
@@ -100,7 +101,7 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
      * @dev Throws if the current timestamp is more than expiry timestamp
      */
     function _checkExpiry(uint256 _tokenId) internal view virtual {
-        require(expireOn[_tokenId]>block.timestamp, "Cant continue, Token Expired");
+        require(expireOn[_tokenId] > block.timestamp, "Cant continue, Token Expired");
     }
 
     /**
@@ -156,14 +157,14 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
      * @param appName the name of app to set for the token
      */
     function safeMintAppNFT(address to, string calldata appName) external whenNotPaused {
-        if(checkDappNamesListFlag){
-            require(!dappNameListAddress.isAppNameAvailable(appName), "App name reserved");
-        }
         if(!mintManyFlag){
             require(balanceOf(to)==0, "provided wallet already used to create app");
         }
 
         string memory validatedAppName = _validateName(appName);
+        if(checkDappNamesListFlag){
+            require(!dappNameListAddress.isAppNameAvailable(validatedAppName), "App name reserved");
+        }
         if (bytes(validatedAppName).length <= SPL_MAX_LENGTH+suffixLength) {
             require(mintSpecialFlag, "Minting of such names is restricted currently");
         }
@@ -178,7 +179,7 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
      */
     function renewToken(uint256 _tokenID) external payable whenNotPaused {
         require(_exists(_tokenID), "Token does not exist");
-        require(msg.sender == _ownerOf(_tokenID), "Not the owner of this tokenId");
+        require(_msgSender() == _ownerOf(_tokenID), "Not the owner of this tokenId");
         require(expireOn[_tokenID] < block.timestamp, "Token is not expired yet");
         require(msg.value >= renew_fees, "Insufficient renew fees");
         expireOn[_tokenID] = block.timestamp + token_life;
@@ -186,7 +187,7 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
 
     /**
      * @notice to claim the .app NFT by new user if its expired
-     * @dev checks if tokenID is expired and renew_period is also passed and allows new user to claim it if renew_fees is paid
+     * @dev checks if tokenID is expired & renew_period is also passed and new user can claim it if renew_fees is paid
      * @param _tokenID the tokenId of the NFT to claim
      */
     function claimToken(uint256 _tokenID) external payable whenNotPaused {
@@ -194,7 +195,7 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
         require(expireOn[_tokenID] + renew_life < block.timestamp, "Token not available for claiming yet");
         require(msg.value >= renew_fees, "Insufficient renew fees");
         expireOn[_tokenID] = block.timestamp + token_life;
-        _safeTransfer(_ownerOf(_tokenID), msg.sender, _tokenID, "");
+        _safeTransfer(_ownerOf(_tokenID), _msgSender(), _tokenID, "");
     }
 
     /**
@@ -204,8 +205,8 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
      * @param _amount the price amount to set for the token
      */
     function createSale(uint256 _tokenID, uint256 _amount) external whenNotExpired(_tokenID) {
-        require(_amount>0, "Set some amount");
-        require(msg.sender == _ownerOf(_tokenID), "Not the owner of this tokenId");
+        require(_amount > 0, "Set some amount");
+        require(_msgSender() == _ownerOf(_tokenID), "Not the owner of this tokenId");
 
         priceOf[_tokenID] = _amount;
         onSale[_tokenID] = true;
@@ -218,7 +219,7 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
      * @param _tokenID the tokenId of the NFT to end sale
      */
     function endSale(uint256 _tokenID) external whenNotExpired(_tokenID) {
-        require(msg.sender == _ownerOf(_tokenID), "Not the owner of this tokenId");
+        require(_msgSender() == _ownerOf(_tokenID), "Not the owner of this tokenId");
 
         priceOf[_tokenID] = 0;
         onSale[_tokenID] = false;
@@ -227,7 +228,7 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
     /**
      * @notice buy a .app NFT which is on sale
      * @dev checks if token is on sale and caller has paid the price of the token
-     * @dev on successful buy, transfer the token to the caller and transfer the price to the owner of the token after deducting fees
+     * @dev on successful buy, transfer token to caller and transfer price to owner of token after deducting fees
      * @param _tokenID the tokenId of the NFT to be bought
      */
     function buyAppNFT(uint256 _tokenID) external payable whenNotExpired(_tokenID) {
@@ -237,7 +238,7 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
         priceOf[_tokenID] = 0;
         onSale[_tokenID] = false;
         require(payable(_ownerOf(_tokenID)).send(price-price*trading_fees/100000000000),"payment transfer failed");
-        _safeTransfer( _ownerOf(_tokenID),msg.sender,_tokenID,"");
+        _safeTransfer( _ownerOf(_tokenID), _msgSender(), _tokenID, "");
     }
 
     /**
@@ -288,12 +289,12 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
 
     /**
      * @notice updates the tokenURI for the given token ID
-     * @dev checks that the caller is the owner or approved for the token and emits an UpdatedTokenURI event after URI update
+     * @dev checks if caller is the owner/approved for tokenID and emits UpdatedTokenURI event after URI update
      * @param _tokenID uint256 token ID to update the URI for
      * @param _tokenURI string URI to set for the given token ID
      */
     function updateTokenURI(uint256 _tokenID, string memory _tokenURI) external whenNotExpired(_tokenID) {
-        require(_isApprovedOrOwner(msg.sender, _tokenID), "ERC721: caller is not owner nor approved");
+        require(_isApprovedOrOwner(_msgSender(), _tokenID), "ERC721: caller is not owner nor approved");
         _setTokenURI(_tokenID, _tokenURI);
         emit UpdatedTokenURI(_tokenID, _tokenURI);
     }
@@ -317,6 +318,15 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
         require(_to.send(amount), 'Fee Transfer to Owner failed.');
     }
 
+    /**
+     * @notice function to set trusted forwarder
+     * @dev only owner can call this function
+     * @param _trustedForwarder the address of trusted forwarder
+     */
+    function setTrustedForwarder(address _trustedForwarder) external onlyOwner {
+        _setTrustedForwarder(_trustedForwarder);
+    }
+
     function _beforeTokenTransfer(address from, address to, uint256 tokenId, uint256 batchSize)
         internal
         whenNotPaused
@@ -332,6 +342,24 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
     {}
 
     // The following functions are overrides required by Solidity.
+
+    function _msgSender()
+        internal
+        view
+        override(ContextUpgradeable, ERC2771Recipient)
+        returns (address sender)
+    {
+        return super._msgSender();
+    }
+
+    function _msgData()
+        internal
+        view
+        override(ContextUpgradeable, ERC2771Recipient)
+        returns (bytes calldata)
+    {
+        return super._msgData();
+    }
 
     function _burn(uint256 tokenId)
         internal

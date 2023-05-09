@@ -39,7 +39,7 @@ abstract contract ERC721NameStorageUpgradeable is Initializable, ERC721Upgradeab
     function checkForSubDomain(string memory name) internal virtual{
         bytes memory nameBytes = bytes(name);
         uint256 length = nameBytes.length;
-        for(uint256 i=0; i<length-suffixLength; i++){
+        for(uint256 i=0; i < length-suffixLength; i++){
             if(nameBytes[i] == '.'){
                 revert("Subdomain not allowed");
             }
@@ -67,9 +67,9 @@ abstract contract ERC721NameStorageUpgradeable is Initializable, ERC721Upgradeab
         // get the last characters of the name
         bytes memory strBytesSuffix = strBytes[strBytesLength-suffixLength:strBytesLength];
 
-        // if str length equals name suffix length & the last characters of the name is equal to nameSuffix then revert else 
-        // if str length is greater than name suffix length & last characters are nameSuffix then the str is already suffixed else
-        // if the last characters of the name is not equal to nameSuffix then append nameSuffix and return the valid name
+        // if str.length == suffix.length & last characters of the name is equal to nameSuffix then revert else 
+        // if str.length > name suffix.length & last characters are nameSuffix then the str is already suffixed else
+        // if the last characters of the name != nameSuffix then append nameSuffix and return the valid name
         if(strBytes.length == suffixLength && keccak256(strBytesSuffix) == keccak256(nameSuffix)){
             revert("ERC721NameStorage: Name not found");
         }else if(keccak256(strBytesSuffix) == keccak256(nameSuffix)){

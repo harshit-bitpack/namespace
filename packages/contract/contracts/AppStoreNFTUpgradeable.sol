@@ -14,6 +14,8 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
+import "@opengsn/contracts/src/ERC2771Recipient.sol";
+
 
 /**
 *  @title AppStoreNFT Upgradeable smart contract
@@ -23,7 +25,7 @@ import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 */
 contract AppStoreNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradeable, 
                     ERC721URIStorageUpgradeable, PausableUpgradeable, OwnableUpgradeable, 
-                        ERC721BurnableUpgradeable, UUPSUpgradeable, ERC721NameStorageUpgradeable {
+                        ERC721BurnableUpgradeable, UUPSUpgradeable, ERC721NameStorageUpgradeable, ERC2771Recipient {
     using CountersUpgradeable for CountersUpgradeable.Counter;
 
     CountersUpgradeable.Counter private _tokenIdCounter;
@@ -36,7 +38,7 @@ contract AppStoreNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enume
     constructor() {
         _disableInitializers();
     }
-    function initialize() initializer public {
+    function initialize(address trustedForwarder_) initializer public {
         __ERC721_init(".appStoreNFT", ".appStoreNFT");
         __ERC721Enumerable_init();
         __ERC721URIStorage_init();
@@ -46,7 +48,7 @@ contract AppStoreNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enume
         __UUPSUpgradeable_init();
         __ERC721NameStorage_init(".appStore");
 
-
+        _setTrustedForwarder(trustedForwarder_);
         _tokenIdCounter.increment();
     }
 
@@ -103,12 +105,12 @@ contract AppStoreNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enume
 
     /**
      * @notice updates the tokenURI for the given token ID
-     * @dev checks that the caller is the owner or approved for the token and emits an UpdatedTokenURI event after URI update
+     * @dev checks if caller is the owner/approved for tokenId and emits UpdatedTokenURI event with URI update
      * @param _tokenId uint256 token ID to update the URI for
      * @param _tokenURI string URI to set for the given token ID
      */
     function updateTokenURI(uint256 _tokenId, string memory _tokenURI) external {
-        require(_isApprovedOrOwner(msg.sender, _tokenId), "ERC721: caller is not owner nor approved");
+        require(_isApprovedOrOwner(_msgSender(), _tokenId), "ERC721: caller is not owner nor approved");
         _setTokenURI(_tokenId, _tokenURI);
         emit UpdatedTokenURI(_tokenId, _tokenURI);
     }
@@ -142,7 +144,7 @@ contract AppStoreNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enume
      * @param _appTokenId the app token ID to block
      */
     function blockApp(uint256 _appStoreTokenId, uint256[] memory _appTokenId) external {
-        require(_isApprovedOrOwner(msg.sender, _appStoreTokenId), "ERC721: function caller is not owner nor approved");
+        require(_isApprovedOrOwner(_msgSender(), _appStoreTokenId), "ERC721: function caller is not owner nor approved");
         for(uint64 i = 0; i < _appTokenId.length; i++){
             isBlocked[_appStoreTokenId][_appTokenId[i]] = true;
         }
@@ -155,7 +157,7 @@ contract AppStoreNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enume
      * @param _appTokenId the app token ID to block
      */
     function unBlockApp(uint256 _appStoreTokenId, uint256[] memory _appTokenId) external {
-        require(_isApprovedOrOwner(msg.sender, _appStoreTokenId), "ERC721: function caller is not owner nor approved");
+        require(_isApprovedOrOwner(_msgSender(), _appStoreTokenId), "ERC721: function caller is not owner nor approved");
         for(uint64 i = 0; i < _appTokenId.length; i++){
             isBlocked[_appStoreTokenId][_appTokenId[i]] = false;
         }
@@ -186,6 +188,24 @@ contract AppStoreNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enume
     {}
 
     // The following functions are overrides required by Solidity.
+
+    function _msgSender()
+        internal
+        view
+        override(ContextUpgradeable, ERC2771Recipient)
+        returns (address sender)
+    {
+        return super._msgSender();
+    }
+
+    function _msgData()
+        internal
+        view
+        override(ContextUpgradeable, ERC2771Recipient)
+        returns (bytes calldata)
+    {
+        return super._msgData();
+    }
 
     function _burn(uint256 tokenId)
         internal

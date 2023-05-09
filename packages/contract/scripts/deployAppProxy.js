@@ -9,6 +9,7 @@ async function main() {
   const appNFT = await upgrades.deployProxy(AppNFT, [
     file.DevNFTUpgradeable,
     file.DappNameList,
+    process.env.TRUSTED_FORWARDER_ADDRESS
   ]);
   await appNFT.deployed();
   console.log("AppNFT deployed to:", appNFT.address);

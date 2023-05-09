@@ -15,4 +15,11 @@ contract dappNameList is Ownable {
             dappNames[_dappNames[i]] = true;
         }
     }
+
+    // function to unset dapp names in array
+    function unsetDappNames(string[] memory _dappNames) external onlyOwner {
+        for (uint i = 0; i < _dappNames.length; i++) {
+            dappNames[_dappNames[i]] = false;
+        }
+    }
 }

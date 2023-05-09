@@ -5,7 +5,8 @@ const {
 const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 const { expect } = require("chai");
 const ADDRESS_ZERO = "0x0000000000000000000000000000000000000000";
-
+const blockedDappNames = require("../scripts/backend/appNames.json");
+require("dotenv")
 describe(".app & .dev NFT minting", function () {
   // We define a fixture to reuse the same setup in every test.
   // We use loadFixture to run this setup once, snapshot that state,
@@ -30,12 +31,14 @@ describe(".app & .dev NFT minting", function () {
       otherAccount: "otherAccountDevName",
     };
     const dev_uri = ".devNFT.com";
-    const specialdAppNames = ["uniswap", "curve", "sushiswap"];
+    const specialdAppNames = ["uniswap.app", "curve.app", "sushiswap.app"];
     const DappNameList = await ethers.getContractFactory("dappNameList");
     const dappNameList = await DappNameList.deploy();
+    await dappNameList.deployed();
     await dappNameList.setDappNames(specialdAppNames);
     const DevNFT = await ethers.getContractFactory("DevNFTUpgradeable");
-    const devNFT = await upgrades.deployProxy(DevNFT);
+    const devNFT = await upgrades.deployProxy(DevNFT,[process.env.TRUSTED_FORWARDER_ADDRESS]);
+    await devNFT.deployed();
     const appName = {
       owner: "ownerAppName",
       account1: "account1AppName",
@@ -48,7 +51,9 @@ describe(".app & .dev NFT minting", function () {
     const appNFT = await upgrades.deployProxy(AppNFT, [
       devNFT.address,
       dappNameList.address,
+      process.env.TRUSTED_FORWARDER_ADDRESS
     ]);
+    await appNFT.deployed();
     // const devNFT = await DevNFT.deploy();
 
     return {
@@ -525,7 +530,7 @@ describe(".app & .dev NFT minting", function () {
             )
         ).not.to.be.reverted;
         expect(await appNFT.tokensName(3)).to.equal(
-          `${specialdAppNames[1]}.app`
+          `${specialdAppNames[1]}`
         );
       });
 

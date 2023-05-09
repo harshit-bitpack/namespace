@@ -15,6 +15,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
+import "@opengsn/contracts/src/ERC2771Recipient.sol";
 
 /**
 *  @title DevNFT Upgradeable smart contract
@@ -24,7 +25,7 @@ import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 */
 contract DevNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradeable, 
                     ERC721URIStorageUpgradeable, PausableUpgradeable, OwnableUpgradeable, 
-                        ERC721BurnableUpgradeable, UUPSUpgradeable, ERC721NameStorageUpgradeable {
+                        ERC721BurnableUpgradeable, UUPSUpgradeable, ERC721NameStorageUpgradeable, ERC2771Recipient {
     using CountersUpgradeable for CountersUpgradeable.Counter;
 
     CountersUpgradeable.Counter private _tokenIdCounter;
@@ -40,7 +41,7 @@ contract DevNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
     constructor() {
         _disableInitializers();
     }
-    function initialize() initializer public {
+    function initialize(address trustedForwarder_) initializer public {
         __ERC721_init("devNFT", "devNFT");
         __ERC721Enumerable_init();
         __ERC721URIStorage_init();
@@ -50,7 +51,7 @@ contract DevNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
         __UUPSUpgradeable_init();
         __ERC721NameStorage_init(".dev");
 
-
+        _setTrustedForwarder(trustedForwarder_);
         _tokenIdCounter.increment();
     }
 
@@ -106,12 +107,12 @@ contract DevNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
 
     /**
      * @notice updates the tokenURI for the given token ID
-     * @dev checks that the caller is the owner or approved for the token and emits an UpdatedTokenURI event after URI update
+     * @dev checks if caller is the owner/approved for tokenId and emits UpdatedTokenURI event with URI update
      * @param _tokenId uint256 token ID to update the URI for
      * @param _tokenURI string URI to set for the given token ID
      */
     function updateTokenURI(uint256 _tokenId, string memory _tokenURI) external {
-        require(_isApprovedOrOwner(msg.sender, _tokenId), "ERC721: caller is not owner nor approved");
+        require(_isApprovedOrOwner(_msgSender(), _tokenId), "ERC721: caller is not owner nor approved");
         _setTokenURI(_tokenId, _tokenURI);
         emit UpdatedTokenURI(_tokenId, _tokenURI);
     }
@@ -135,6 +136,15 @@ contract DevNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
         require(_to.send(amount), 'Fee Transfer to Owner failed.');
     }
 
+    /**
+     * @notice function to set trusted forwarder
+     * @dev only owner can call this function
+     * @param _trustedForwarder the address of trusted forwarder
+     */
+    function setTrustedForwarder(address _trustedForwarder) external onlyOwner {
+        _setTrustedForwarder(_trustedForwarder);
+    }
+
     function _beforeTokenTransfer(address from, address to, uint256 tokenId, uint256 batchSize)
         internal
         whenNotPaused
@@ -150,6 +160,24 @@ contract DevNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
     {}
 
     // The following functions are overrides required by Solidity.
+
+        function _msgSender()
+        internal
+        view
+        override(ContextUpgradeable, ERC2771Recipient)
+        returns (address sender)
+    {
+        return super._msgSender();
+    }
+
+    function _msgData()
+        internal
+        view
+        override(ContextUpgradeable, ERC2771Recipient)
+        returns (bytes calldata)
+    {
+        return super._msgData();
+    }
 
     function _burn(uint256 tokenId)
         internal

@@ -6,7 +6,9 @@ var file = require("./config.json");
 
 async function main() {
   const AppStoreNFT = await ethers.getContractFactory("AppStoreNFTUpgradeable");
-  const appStoreNFT = await upgrades.deployProxy(AppStoreNFT);
+  const appStoreNFT = await upgrades.deployProxy(AppStoreNFT,[
+    process.env.TRUSTED_FORWARDER_ADDRESS
+  ]);
   await appStoreNFT.deployed();
   console.log("AppStoreNFT deployed to:", appStoreNFT.address);
   file.AppStoreNFTUpgradeable = appStoreNFT.address;
