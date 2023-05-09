@@ -8,7 +8,8 @@ import { z } from "zod";
 const server = z.object({
     NODE_ENV: z.enum(["development", "test", "production"]),
     BICONOMY_API_KEY: z.string(),
-    ALCHEMY_API_KEY_URL: z.string()
+    ALCHEMY_API_KEY_URL_ETHEREUM: z.string(),
+    ALCHEMY_API_KEY_URL_POLYGON: z.string()
 });
 
 /**
@@ -35,7 +36,8 @@ const processEnv = {
     NEXT_PUBLIC_DEV_CONTRACT_ADDRESS:
         process.env.NEXT_PUBLIC_DEV_CONTRACT_ADDRESS,
     BICONOMY_API_KEY: process.env.BICONOMY_API_KEY,
-    ALCHEMY_API_KEY_URL: process.env.ALCHEMY_API_KEY_URL
+    ALCHEMY_API_KEY_URL_ETHEREUM: process.env.ALCHEMY_API_KEY_URL_ETHEREUM,
+    ALCHEMY_API_KEY_URL_POLYGON: process.env.ALCHEMY_API_KEY_URL_POLYGON
 };
 
 // Don't touch the part below

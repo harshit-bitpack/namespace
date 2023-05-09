@@ -49,12 +49,15 @@ export default function AppDetails({
   appName,
   metadata,
   isMetaLoading,
-  api_key,
+  alchemy_api_key_urls,
 }: {
   appName: string;
   metadata: any;
   isMetaLoading: boolean;
-  api_key: string;
+  alchemy_api_key_urls: {
+    api_key_url_ethereum: string;
+    api_key_url_polygon: string;
+  };
 }) {
   console.log("MetaData : ", metadata);
   const sdk = useSDK();
@@ -202,45 +205,45 @@ export default function AppDetails({
   ];
 
   // validate contract address
-  async function validateAddress(address: string) {
-    const web3 = new Web3(api_key);
-    // check address length and prefix
+  async function validateAddress(
+    address: string,
+    chainId: number
+  ): Promise<boolean> {
+    const web3 = new Web3(
+      chainId === 1
+        ? alchemy_api_key_urls.api_key_url_ethereum
+        : alchemy_api_key_urls.api_key_url_polygon
+    );
     if (address.length !== 42 || address.slice(0, 2) !== "0x") {
       return false;
     }
-    // get code at address
     try {
       const code = await web3.eth.getCode(address);
-      // check if code exists
-      if (code === "0x" || code === "0x0") {
-        return false;
-      }
-      // address is valid contract address
-      return true;
-    } catch (e: any) {
+      return code !== "0x" && code !== "0x0";
+    } catch (error) {
       return false;
     }
   }
 
   async function validateAddresses(
-    addresses: string[]
-  ): Promise<string | true> {
-    // Flatten the array of addresses and remove any whitespace
-    const flatAddresses = addresses
-      .map((addressList) => addressList.split(","))
-      .flat()
-      .map((address) => address.trim());
-
-    // Use Promise.all() to validate all addresses in parallel
-    const results = await Promise.all(flatAddresses.map(validateAddress));
-    console.log("results : ", results);
-    // Check each validation result and return the first invalid address or true if all addresses are valid
-    for (let i = 0; i < results.length; i++) {
-      if (!results[i]) {
-        return flatAddresses[i];
+    addresses: { chain: number; address: string }[]
+  ): Promise<{ chain: number; address: string } | true> {
+    for (const { chain, address } of addresses) {
+      const currFlatAddresses = address
+        .split(",")
+        .map((addressVal) => addressVal.trim());
+      const chainResults = await Promise.all(
+        currFlatAddresses.map((addr) => validateAddress(addr, chain))
+      );
+      for (let i = 0; i < chainResults.length; i++) {
+        if (!chainResults[i]) {
+          return {
+            chain: chain,
+            address: currFlatAddresses[i],
+          };
+        }
       }
     }
-
     return true;
   }
 
@@ -602,16 +605,6 @@ export default function AppDetails({
                     metadata.chains = chainIdArr;
 
                     if (contractArr) {
-                      const invalidAddress = await validateAddresses(
-                        contractArr
-                      );
-
-                      if (invalidAddress !== true) {
-                        throw new Error(
-                          `${invalidAddress} is not a valid address`
-                        );
-                      }
-
                       const contracts: { chain: number; address: string }[] =
                         chainIdArr.reduce(
                           (
@@ -632,6 +625,17 @@ export default function AppDetails({
                           },
                           []
                         );
+
+                      const invalidAddress = await validateAddresses(contracts);
+                      if (invalidAddress !== true) {
+                        throw new Error(
+                          `${
+                            invalidAddress.address
+                          } is not a valid address on ${
+                            invalidAddress.chain === 1 ? "Ethereum" : "Polygon"
+                          }`
+                        );
+                      }
                       metadata.contractAddress = contracts;
                     }
 
@@ -662,9 +666,6 @@ export default function AppDetails({
                         .map((tag) => tag.trim());
                     }
 
-                    if (!isSelfModerated && !metadata.isSelfModerated) {
-                      throw new Error("isSelfModerated is required");
-                    }
                     metadata.isSelfModerated = isSelfModerated;
 
                     resolve("done");

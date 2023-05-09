@@ -12,9 +12,12 @@ import { env } from "@/env/schema.mjs";
 
 // TODO: refactor to reusable components
 export default function EditInfo({
-  alchemy_api_key_url,
+  alchemy_api_key_urls,
 }: {
-  alchemy_api_key_url: string;
+  alchemy_api_key_urls: {
+    api_key_url_ethereum: string;
+    api_key_url_polygon: string;
+  };
 }) {
   const router = useRouter();
   const { address } = useAccount();
@@ -80,7 +83,7 @@ export default function EditInfo({
             {ext === "app" && (
               <AppEdit
                 appName={appName}
-                alchemy_api_key_url={alchemy_api_key_url}
+                alchemy_api_key_urls={alchemy_api_key_urls}
               />
             )}
 
@@ -96,13 +99,12 @@ export default function EditInfo({
 }
 
 export async function getServerSideProps() {
-  // Access environment variables
-  const alchemy_api_key_url = env.ALCHEMY_API_KEY_URL;
-  console.log("api keys : ", alchemy_api_key_url);
-  // Pass environment variables as props
   return {
     props: {
-      alchemy_api_key_url,
+      alchemy_api_key_urls: {
+        api_key_url_ethereum: env.ALCHEMY_API_KEY_URL_ETHEREUM,
+        api_key_url_polygon: env.ALCHEMY_API_KEY_URL_POLYGON,
+      },
     },
   };
 }

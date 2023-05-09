@@ -7,10 +7,13 @@ import { useForm } from "react-hook-form";
 
 export default function AppEdit({
   appName,
-  alchemy_api_key_url,
+  alchemy_api_key_urls,
 }: {
   appName: string;
-  alchemy_api_key_url: string;
+  alchemy_api_key_urls: {
+    api_key_url_ethereum: string;
+    api_key_url_polygon: string;
+  };
 }) {
   const { metadata, isMetaLoading } = useFetchMetadata(appName);
   const { register, handleSubmit, getValues, resetField, watch, setValue } =
@@ -32,7 +35,7 @@ export default function AppEdit({
             appName={appName}
             metadata={metadata}
             isMetaLoading={isMetaLoading}
-            api_key={alchemy_api_key_url}
+            alchemy_api_key_urls={alchemy_api_key_urls}
           />
         </TabsContent>
 
