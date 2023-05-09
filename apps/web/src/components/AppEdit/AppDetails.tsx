@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
   Button,
+  Switch,
 } from "ui";
 import ReactSelect from "react-select";
 import { toast } from "sonner";
@@ -17,6 +18,8 @@ import { countries } from "countries-list";
 import iso6391 from "iso-639-1";
 import Spinner from "../Spinner";
 import { categories, subCategories } from "../../lib/utils";
+import Web3 from "web3";
+
 const AppDetailsRow = ({
   children,
   label,
@@ -46,10 +49,12 @@ export default function AppDetails({
   appName,
   metadata,
   isMetaLoading,
+  api_key,
 }: {
   appName: string;
   metadata: any;
   isMetaLoading: boolean;
+  api_key: string;
 }) {
   console.log("MetaData : ", metadata);
   const sdk = useSDK();
@@ -62,13 +67,12 @@ export default function AppDetails({
   const [repoUrl, setRepoUrl] = useState<string>();
   const [dappId, setDappId] = useState(appName);
   const [chainIdArr, setChainIdArr] = useState<number[]>([]);
-  console.log("chain id arr : ", chainIdArr);
   const [category, setCategory] = useState<string>();
   const [subCategory, setSubCategory] = useState<string>();
   const [contractCounter, setContractCounter] = useState(1);
   const [contractArr, setContractArr] = useState<string[]>([]);
-  console.log("contract arr : ", contractArr);
   const [tags, setTags] = useState<string>();
+  const [isSelfModerated, setIsSelfModerated] = useState<boolean>(false);
 
   const removeContractAddress = () => {
     if (contractArr.length > 0) {
@@ -111,6 +115,10 @@ export default function AppDetails({
 
     if (metadata.deniedCountries) {
       setDeniedCountries(metadata.deniedCountries);
+    }
+
+    if (metadata.isSelfModerated) {
+      setIsSelfModerated(metadata.isSelfModerated);
     }
   }, [metadata]);
 
@@ -192,6 +200,49 @@ export default function AppDetails({
     { label: "Ethereum", value: 1 },
     { label: "Polygon", value: 137 },
   ];
+
+  // validate contract address
+  async function validateAddress(address: string) {
+    const web3 = new Web3(api_key);
+    // check address length and prefix
+    if (address.length !== 42 || address.slice(0, 2) !== "0x") {
+      return false;
+    }
+    // get code at address
+    try {
+      const code = await web3.eth.getCode(address);
+      // check if code exists
+      if (code === "0x" || code === "0x0") {
+        return false;
+      }
+      // address is valid contract address
+      return true;
+    } catch (e: any) {
+      return false;
+    }
+  }
+
+  async function validateAddresses(
+    addresses: string[]
+  ): Promise<string | true> {
+    // Flatten the array of addresses and remove any whitespace
+    const flatAddresses = addresses
+      .map((addressList) => addressList.split(","))
+      .flat()
+      .map((address) => address.trim());
+
+    // Use Promise.all() to validate all addresses in parallel
+    const results = await Promise.all(flatAddresses.map(validateAddress));
+    console.log("results : ", results);
+    // Check each validation result and return the first invalid address or true if all addresses are valid
+    for (let i = 0; i < results.length; i++) {
+      if (!results[i]) {
+        return flatAddresses[i];
+      }
+    }
+
+    return true;
+  }
 
   return (
     <div className="flex flex-col items-center justify-start w-full rounded-lg bg-white shadow-[0_20_20_60_#0000000D] overflow-hidden">
@@ -493,6 +544,15 @@ export default function AppDetails({
                 onChange={(e) => setTags(e.target.value)}
               />
             </div>
+            <div className="flex flex-col gap-y-2">
+              <Label>
+                Is Self Moderated ?<span className="text-red-500">*</span>
+              </Label>
+              <Switch
+                checked={isSelfModerated}
+                onClick={() => setIsSelfModerated(!isSelfModerated)}
+              />
+            </div>
           </AppDetailsRow>
 
           <div className="w-full flex flex-row justify-end gap-x-4">
@@ -500,107 +560,132 @@ export default function AppDetails({
             <Button
               disabled={saving}
               onClick={async () => {
-                if (!storage || !sdk) return;
+                const saving = async (
+                  resolve: (value: any) => void,
+                  reject: (value: any) => void
+                ) => {
+                  try {
+                    if (!storage || !sdk) return;
 
-                setSaving(true);
+                    setSaving(true);
 
-                if (chainIdArr.length === 0) {
-                  toast.message("Chain Id is required");
-                  setSaving(false);
-                  return;
-                }
+                    if (chainIdArr.length === 0) {
+                      throw new Error("Chain Id is required");
+                    }
 
-                if (!name && !metadata.name) {
-                  toast.message("Name is required");
-                  setSaving(false);
-                  return;
-                }
-                metadata.name = name;
+                    if (!name && !metadata.name) {
+                      throw new Error("Name is required");
+                    }
+                    metadata.name = name;
 
-                if (!description && !metadata.description) {
-                  toast.message("Description is required");
-                  setSaving(false);
-                  return;
-                }
-                metadata.description = description;
+                    if (!description && !metadata.description) {
+                      throw new Error("Description is required");
+                    }
+                    metadata.description = description;
 
-                if (!appUrl && !metadata.appUrl) {
-                  toast.message("URL is required");
-                  setSaving(false);
-                  return;
-                }
-                metadata.appUrl = appUrl;
+                    if (!appUrl && !metadata.appUrl) {
+                      throw new Error("URL is required");
+                    }
+                    metadata.appUrl = appUrl;
 
-                if (repoUrl) {
-                  metadata.repoUrl = repoUrl;
-                }
+                    if (repoUrl) {
+                      metadata.repoUrl = repoUrl;
+                    }
 
-                if (dappId) {
-                  metadata.dappId = dappId;
-                }
+                    if (dappId) {
+                      metadata.dappId = dappId;
+                    }
 
-                if (chainIdArr.length <= 0) {
-                  toast.message("Select Chain ID");
-                  setSaving(false);
-                  return;
-                }
-                metadata.chains = chainIdArr;
+                    if (chainIdArr.length <= 0) {
+                      throw new Error("Select Chain ID");
+                    }
+                    metadata.chains = chainIdArr;
 
-                if (contractArr) {
-                  const contracts: { chain: number; address: string }[] =
-                    chainIdArr.reduce(
-                      (
-                        acc: { chain: number; address: string }[],
-                        chain: number,
-                        idx: number
-                      ) => {
-                        if (contractArr[idx] && contractArr[idx].length > 0) {
-                          acc.push({
-                            chain: chain,
-                            address: contractArr[idx],
-                          });
-                        }
-                        return acc;
-                      },
-                      []
-                    );
-                  console.log("contracts : ", contracts);
-                  metadata.contractAddress = contracts;
-                }
+                    if (contractArr) {
+                      const invalidAddress = await validateAddresses(
+                        contractArr
+                      );
 
-                metadata.allowedCountries = allowedCountries;
-                metadata.deniedCountries = deniedCountries;
-                if (!category && !metadata.category) {
-                  toast.message("Category is required");
-                  setSaving(false);
-                  return;
-                }
-                metadata.category = category;
+                      if (invalidAddress !== true) {
+                        throw new Error(
+                          `${invalidAddress} is not a valid address`
+                        );
+                      }
 
-                if (subCategory) {
-                  metadata.subCategory = subCategory;
-                }
+                      const contracts: { chain: number; address: string }[] =
+                        chainIdArr.reduce(
+                          (
+                            acc: { chain: number; address: string }[],
+                            chain: number,
+                            idx: number
+                          ) => {
+                            if (
+                              contractArr[idx] &&
+                              contractArr[idx].length > 0
+                            ) {
+                              acc.push({
+                                chain: chain,
+                                address: contractArr[idx],
+                              });
+                            }
+                            return acc;
+                          },
+                          []
+                        );
+                      metadata.contractAddress = contracts;
+                    }
 
-                if (!language && !metadata.language) {
-                  toast.message("Language is required");
-                  setSaving(false);
-                  return;
-                }
-                metadata.language = language;
-                metadata.minimumAge = minimumAge;
+                    metadata.allowedCountries = allowedCountries;
+                    metadata.deniedCountries = deniedCountries;
+                    if (!category && !metadata.category) {
+                      throw new Error("Category is required");
+                    }
+                    metadata.category = category;
 
-                if (!version && !metadata.version) {
-                  toast.message("Version is required");
-                  setSaving(false);
-                  return;
-                }
-                metadata.version = version;
-                if (tags) {
-                  metadata.tags = tags.split(/[, ]+/).map((tag) => tag.trim());
-                }
+                    if (subCategory) {
+                      metadata.subCategory = subCategory;
+                    }
 
-                toast.message("Successfully saved data");
-                setSaving(false);
+                    if (!language && !metadata.language) {
+                      throw new Error("Language is required");
+                    }
+                    metadata.language = language;
+                    metadata.minimumAge = minimumAge;
+
+                    if (!version && !metadata.version) {
+                      throw new Error("Version is required");
+                    }
+                    metadata.version = version;
+                    if (tags) {
+                      metadata.tags = tags
+                        .split(/[, ]+/)
+                        .map((tag) => tag.trim());
+                    }
+
+                    if (!isSelfModerated && !metadata.isSelfModerated) {
+                      throw new Error("isSelfModerated is required");
+                    }
+                    metadata.isSelfModerated = isSelfModerated;
+
+                    resolve("done");
+                    setSaving(false);
+                  } catch (e: any) {
+                    setSaving(false);
+                    console.log(e.message);
+                    reject(e.message);
+                  }
+                };
+
+                toast.promise(
+                  new Promise((resolve, reject) => saving(resolve, reject)),
+                  {
+                    success: `Successfully saved data`,
+                    error: (data) => {
+                      return data;
+                    },
+                    loading: `saving....`,
+                  }
+                );
               }}
             >
               Save

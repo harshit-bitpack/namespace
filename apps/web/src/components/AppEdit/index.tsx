@@ -5,7 +5,13 @@ import AppImages from "./AppImages";
 import useFetchMetadata from "@/lib/hooks/useFetchMetadata";
 import { useForm } from "react-hook-form";
 
-export default function AppEdit({ appName }: { appName: string }) {
+export default function AppEdit({
+  appName,
+  alchemy_api_key_url,
+}: {
+  appName: string;
+  alchemy_api_key_url: string;
+}) {
   const { metadata, isMetaLoading } = useFetchMetadata(appName);
   const { register, handleSubmit, getValues, resetField, watch, setValue } =
     useForm();
@@ -26,6 +32,7 @@ export default function AppEdit({ appName }: { appName: string }) {
             appName={appName}
             metadata={metadata}
             isMetaLoading={isMetaLoading}
+            api_key={alchemy_api_key_url}
           />
         </TabsContent>
 

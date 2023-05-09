@@ -12,9 +12,12 @@ import NavbarApp from "@/components/Navbar/App";
 import Spacer from "@/components/Spacer";
 import GlobalSearchIcon from "@/public/global-search.svg";
 import Spinner from "@/components/Spinner";
-import { ThirdwebSDK } from "@thirdweb-dev/sdk";
 
-export default function App() {
+export default function App({
+  biconomy_api_key,
+}: {
+  biconomy_api_key: string;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState(router.query.q?.toString() ?? "");
@@ -117,7 +120,7 @@ export default function App() {
           tx.setGaslessOptions({
             biconomy: {
               apiId: "c6720081-99a3-4295-bfb1-248f1750f5fa",
-              apiKey: env.NEXT_PUBLIC_BICONOMY_API_KEY,
+              apiKey: biconomy_api_key,
               deadlineSeconds: 60,
             },
           });
@@ -147,7 +150,7 @@ export default function App() {
           tx.setGaslessOptions({
             biconomy: {
               apiId: "ba9c821d-3c81-4ef1-8a4c-f8b8f8727552",
-              apiKey: env.NEXT_PUBLIC_BICONOMY_API_KEY,
+              apiKey: env.BICONOMY_API_KEY,
               deadlineSeconds: 60,
             },
           });
@@ -256,4 +259,16 @@ export default function App() {
       <Spacer />
     </div>
   );
+}
+
+export async function getServerSideProps() {
+  // Access environment variables
+  const biconomy_api_key = env.BICONOMY_API_KEY;
+  console.log("api keys : ", biconomy_api_key);
+  // Pass environment variables as props
+  return {
+    props: {
+      biconomy_api_key,
+    },
+  };
 }
