@@ -7,12 +7,18 @@ import Spacer from "@/components/Spacer";
 import AppInfo from "./AppInfo";
 import DevInfo from "./DevInfo";
 import useFetchMetadata from "@/lib/hooks/useFetchMetadata";
+import Spinner from "../Spinner";
 
 export default function Info({ name }: { name: string }) {
   const ext = name.split(".").pop();
   const { metadata, isMetaLoading } = useFetchMetadata(name);
   return (
     <>
+      {isMetaLoading && (
+        <div className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <Spinner />
+        </div>
+      )}
       {!isMetaLoading && (
         <div className="flex flex-col w-full gap-y-3 text-left">
           <div className="flex flex-row items-center justify-between w-full px-4 py-3 rounded-lg bg-white">
