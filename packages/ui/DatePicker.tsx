@@ -20,9 +20,15 @@ export function DatePicker({
   onDateChange: (date: Date) => void;
   defaultDate?: string | Date;
 }) {
-  const [date, setDate] = React.useState<Date>(
-    new Date(Date.parse(defaultDate as string)) || new Date()
-  );
+  const [date, setDate] = React.useState<Date>(new Date());
+
+  React.useEffect(() => {
+    if (defaultDate) {
+      setDate(new Date(Date.parse(defaultDate as string)));
+    }
+  }, [defaultDate]);
+
+  console.log("defaultDate", defaultDate);
   const handleDateChange = (newDate: Date | undefined) => {
     setDate(newDate as Date);
     onDateChange(newDate as Date);

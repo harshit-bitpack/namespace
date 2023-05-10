@@ -1,8 +1,5 @@
 import { Trash, File } from "lucide-react";
-import { useState } from "react";
 import {
-  Checkbox,
-  DatePicker,
   Input,
   Label,
   Select,
@@ -12,11 +9,6 @@ import {
   SelectValue,
 } from "ui";
 
-type toggleDateAndWalletFileds = {
-  hasWalletConnect: boolean;
-  isListedInRegistry: boolean;
-};
-
 type AndroidState = {
   minVersion: string | undefined;
   architecture: string | undefined;
@@ -24,10 +16,9 @@ type AndroidState = {
   apk: File | undefined;
   url?: string | undefined;
   id: string;
-  walletConnectVersion: string | undefined;
   packageId: string | undefined;
   versionCode: string | undefined;
-  dateListedInRegistry: Date | undefined;
+  version: string | undefined;
 };
 
 type IosState = {
@@ -37,10 +28,9 @@ type IosState = {
   ipa: File | undefined;
   url?: string | undefined;
   id: string;
-  walletConnectVersion: string | undefined;
   packageId: string | undefined;
   versionCode: string | undefined;
-  dateListedInRegistry: Date | undefined;
+  version: string | undefined;
 };
 
 const AppUploadContainer = ({
@@ -56,31 +46,6 @@ const AppUploadContainer = ({
   ) => void;
   app: string;
 }) => {
-  const [showFileds, setShowFields] = useState<toggleDateAndWalletFileds>({
-    hasWalletConnect: platformState.walletConnectVersion ? true : false,
-    isListedInRegistry: platformState.dateListedInRegistry ? true : false,
-  });
-
-  const toggleDateAndWalletFileds = (type: keyof toggleDateAndWalletFileds) => {
-    setShowFields((prevState) => ({
-      ...prevState,
-      [type]: !prevState[type],
-    }));
-  };
-
-  const handleDateChange = (date: Date) => {
-    console.log("Selected date:", date);
-    const newState = {
-      ...platformState,
-      dateListedInRegistry: date,
-    };
-    handlePlatformStateChange(
-      app as "android" | "ios",
-      platformState.id,
-      newState
-    );
-  };
-
   return (
     <>
       <div className="flex items-center justify-center w-full">
@@ -275,27 +240,51 @@ const AppUploadContainer = ({
           </Select>
         </div>
       </div>
-      <div className="flex flex-col gap-y-2">
-        <Label>
-          {`Minimum Version`}
-          <span className="text-red-500">*</span>
-        </Label>
-        <Input
-          placeholder="10.0.0"
-          required
-          value={platformState.minVersion}
-          onChange={(e) => {
-            const newState = {
-              ...platformState,
-              minVersion: e.target.value,
-            };
-            handlePlatformStateChange(
-              app as "android" | "ios",
-              platformState.id,
-              newState
-            );
-          }}
-        />
+      <div className="flex flex-row gap-x-2 w-full">
+        <div className="flex flex-col gap-y-2 w-[50%]">
+          <Label>
+            {`Minimum Version`}
+            <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            placeholder="10.0.0"
+            required
+            value={platformState.minVersion}
+            onChange={(e) => {
+              const newState = {
+                ...platformState,
+                minVersion: e.target.value,
+              };
+              handlePlatformStateChange(
+                app as "android" | "ios",
+                platformState.id,
+                newState
+              );
+            }}
+          />
+        </div>
+        <div className="flex flex-col gap-y-2 w-[50%]">
+          <Label>
+            {`Version`}
+            <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            placeholder="10.0.0"
+            required
+            value={platformState.version}
+            onChange={(e) => {
+              const newState = {
+                ...platformState,
+                version: e.target.value,
+              };
+              handlePlatformStateChange(
+                app as "android" | "ios",
+                platformState.id,
+                newState
+              );
+            }}
+          />
+        </div>
       </div>
       <div className="flex flex-row gap-x-2 w-full">
         <div className="flex flex-col gap-y-2 w-[50%]">
@@ -343,66 +332,8 @@ const AppUploadContainer = ({
           />
         </div>
       </div>
-      <div className="flex flex-row gap-x-2 w-full">
-        <div className="flex items-center space-x-2 w-[50%]">
-          <Checkbox
-            onClick={(e) => {
-              toggleDateAndWalletFileds("isListedInRegistry");
-            }}
-            checked={showFileds["isListedInRegistry"]}
-            id="registry-check"
-          />
-          <Label htmlFor="registry-check">Listed in registry</Label>
-        </div>
-        {showFileds["isListedInRegistry"] && (
-          <div className="flex flex-col gap-y-2 w-[50%]">
-            <DatePicker
-              onDateChange={handleDateChange}
-              defaultDate={platformState.dateListedInRegistry}
-            />
-          </div>
-        )}
-      </div>
-      <div className="flex flex-row gap-x-2 w-full">
-        <div className="flex items-center space-x-2 w-[50%]">
-          <Checkbox
-            onClick={(e) => {
-              toggleDateAndWalletFileds("hasWalletConnect");
-            }}
-            checked={showFileds["hasWalletConnect"]}
-            id="wallet-connect-check"
-          />
-          <Label htmlFor="wallet-connect-check">
-            Does your app use wallet connect?
-          </Label>
-        </div>
-        {showFileds["hasWalletConnect"] && (
-          <div className="flex flex-col gap-y-2 w-[50%]">
-            <Select
-              value={platformState.walletConnectVersion}
-              onValueChange={(v) => {
-                const newState = {
-                  ...platformState,
-                  walletConnectVersion: v as any,
-                };
-                handlePlatformStateChange(
-                  app as "android" | "ios",
-                  platformState.id,
-                  newState
-                );
-              }}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select wallet version" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="v1">v1</SelectItem>
-                <SelectItem value="v2">v2</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-      </div>
+
+      <hr className="my-4" />
     </>
   );
 };

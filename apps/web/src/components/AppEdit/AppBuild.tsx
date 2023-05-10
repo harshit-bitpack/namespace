@@ -1,20 +1,8 @@
 import { useStorageUpload } from "@thirdweb-dev/react";
-import { File, Trash, PlusCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
-import {
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Label,
-  Button,
-  Checkbox,
-  DatePicker,
-} from "ui";
+import { Input, Label, Button, Checkbox } from "ui";
 import Spinner from "../Spinner";
 import AppUploadContainer from "../AppUploadContainer";
 
@@ -24,11 +12,6 @@ type checkboxState = {
   ios: boolean;
 };
 
-type toggleDateAndWalletFileds = {
-  hasWalletConnect: boolean;
-  isListedInRegistry: boolean;
-};
-
 type AndroidState = {
   minVersion: string | undefined;
   architecture: string | undefined;
@@ -36,10 +19,9 @@ type AndroidState = {
   apk: File | undefined;
   url?: string | undefined;
   id: string;
-  walletConnectVersion: string | undefined;
   packageId: string | undefined;
   versionCode: string | undefined;
-  dateListedInRegistry: Date | undefined;
+  version: string | undefined;
 };
 
 type IosState = {
@@ -49,15 +31,14 @@ type IosState = {
   ipa: File | undefined;
   url?: string | undefined;
   id: string;
-  walletConnectVersion: string | undefined;
   packageId: string | undefined;
   versionCode: string | undefined;
-  dateListedInRegistry: Date | undefined;
+  version: string | undefined;
 };
 
 type webState = {
   url: string | undefined;
-  id: string;
+  version: string | undefined;
 };
 
 const AppBuildRow = ({
@@ -97,9 +78,9 @@ const WebContainer = ({
 }: {
   webState: any;
   handleWebState: (
-    app: "android" | "ios" | "web",
-    id: string,
-    newState: AndroidState | IosState | webState
+    app: "web",
+    id: string | undefined,
+    newState: webState
   ) => void;
 }) => {
   return (
@@ -117,7 +98,7 @@ const WebContainer = ({
             ...webState,
             url: e.target.value,
           };
-          handleWebState("web", webState.id, newState);
+          handleWebState("web", "", newState);
         }}
       />
     </div>
@@ -150,36 +131,32 @@ export default function AppBuild({
   const [android, setAndroid] = useState<AndroidState[]>([
     {
       minVersion: "",
+      version: "",
       architecture: "",
       screenDPI: "",
       apk: undefined,
       id: uuidv4(),
-      walletConnectVersion: "",
       packageId: "",
       versionCode: "",
-      dateListedInRegistry: undefined,
     },
   ]);
   const [ios, setIos] = useState<IosState[]>([
     {
       minVersion: "",
+      version: "",
       architecture: "",
       screenDPI: "",
       ipa: undefined,
       id: uuidv4(),
-      walletConnectVersion: "",
       packageId: "",
       versionCode: "",
-      dateListedInRegistry: undefined,
     },
   ]);
 
-  const [web, setWeb] = useState<webState[]>([
-    {
-      url: "",
-      id: uuidv4(),
-    },
-  ]);
+  const [web, setWeb] = useState<webState>({
+    url: "",
+    version: "",
+  });
 
   const { mutateAsync: upload } = useStorageUpload();
   const isAndroid = appType["android"];
@@ -208,6 +185,10 @@ export default function AppBuild({
             apk: undefined,
           }))
         );
+        setAppType((prevState) => ({
+          ...prevState,
+          android: true,
+        }));
       }
       if (iosFiles.length > 0) {
         setIos(
@@ -217,9 +198,18 @@ export default function AppBuild({
             ipa: undefined,
           }))
         );
+        setAppType((prevState) => ({
+          ...prevState,
+          ios: true,
+        }));
       }
+
       if (webUrls.length > 0) {
-        setWeb(webUrls.map((item: any) => ({ ...item, id: uuidv4() })));
+        setWeb(webUrls[0]);
+        setAppType((prevState) => ({
+          ...prevState,
+          web: true,
+        }));
       }
     }
   }, [metadata]);
@@ -230,17 +220,19 @@ export default function AppBuild({
         (item.url || item.apk) &&
         item.minVersion &&
         item.packageId &&
-        item.versionCode
+        item.versionCode &&
+        item.version
     );
     const isIosValid = ios.every(
       (item) =>
         (item.url || item.ipa) &&
         item.minVersion &&
         item.packageId &&
-        item.versionCode
+        item.versionCode &&
+        item.version
     );
 
-    const isWebValid = web.every((item) => item.url);
+    const isWebValid = Boolean(web.url);
 
     if (
       (appType["android"] && !isAndroidValid) ||
@@ -256,17 +248,19 @@ export default function AppBuild({
         (item.url || item.apk) &&
         item.minVersion &&
         item.packageId &&
-        item.versionCode
+        item.versionCode &&
+        item.version
     );
     const iosFiles = ios.filter(
       (item) =>
         (item.url || item.ipa) &&
         item.minVersion &&
         item.packageId &&
-        item.versionCode
+        item.versionCode &&
+        item.version
     );
 
-    const webUrls = web.filter((item) => item.url);
+    const webUrl = web.url;
 
     const uploadFiles = async (
       resolve: (value: any) => void,
@@ -306,10 +300,6 @@ export default function AppBuild({
         const apkUploadUrls = await Promise.all(androidUploadPromises);
         const ipaUploadUrls = await Promise.all(iosUploadPromises);
 
-        console.log("ipaurl", ipaUploadUrls);
-        console.log("apkurl", apkUploadUrls);
-        console.log("weburl", webUrls);
-
         let availableOnPlatform: ("android" | "ios" | "web")[] = [];
 
         if (androidFiles.length > 0) {
@@ -318,7 +308,7 @@ export default function AppBuild({
         if (iosFiles.length > 0) {
           availableOnPlatform.push("ios");
         }
-        if (webUrls.length > 0) {
+        if (isWebValid) {
           availableOnPlatform.push("web");
         }
 
@@ -336,11 +326,9 @@ export default function AppBuild({
             minVersion: androidFiles[index].minVersion,
             architecture: androidFiles[index].architecture,
             screenDPI: androidFiles[index].screenDPI,
-            walletConnectVersion: androidFiles[index].walletConnectVersion,
             packageId: androidFiles[index].packageId,
             versionCode: androidFiles[index].versionCode,
-            dateListedInRegistry:
-              androidFiles[index].dateListedInRegistry?.toString(),
+            version: androidFiles[index].version,
           };
 
           if (!metadata.downloadBaseUrls) {
@@ -357,11 +345,9 @@ export default function AppBuild({
             minVersion: iosFiles[index].minVersion,
             architecture: iosFiles[index].architecture,
             screenDPI: iosFiles[index].screenDPI,
-            walletConnectVersion: iosFiles[index].walletConnectVersion,
             packageId: iosFiles[index].packageId,
             versionCode: iosFiles[index].versionCode,
-            dateListedInRegistry:
-              iosFiles[index].dateListedInRegistry?.toString(),
+            version: iosFiles[index].version,
           };
 
           if (!metadata.downloadBaseUrls) {
@@ -371,9 +357,9 @@ export default function AppBuild({
           }
         });
 
-        webUrls.forEach((webUrl, index) => {
+        if (isWebValid) {
           const newItem = {
-            url: webUrl.url,
+            url: webUrl,
             platform: "web",
           };
 
@@ -382,7 +368,7 @@ export default function AppBuild({
           } else if (metadata.downloadBaseUrls) {
             metadata.downloadBaseUrls.push(newItem);
           }
-        });
+        }
 
         console.log("updatedMetadata", metadata);
         setIsSaving(false);
@@ -411,14 +397,13 @@ export default function AppBuild({
       setAndroid([
         {
           minVersion: "",
+          version: "",
           architecture: "",
           screenDPI: "",
           apk: undefined,
           id: uuidv4(),
-          walletConnectVersion: "",
           packageId: "",
           versionCode: "",
-          dateListedInRegistry: undefined,
         },
       ]);
     }
@@ -426,24 +411,21 @@ export default function AppBuild({
       setIos([
         {
           minVersion: "",
+          version: "",
           architecture: "",
           screenDPI: "",
           ipa: undefined,
           id: uuidv4(),
-          walletConnectVersion: "",
           packageId: "",
           versionCode: "",
-          dateListedInRegistry: undefined,
         },
       ]);
     }
     if (appType["web"]) {
-      setWeb([
-        {
-          url: "",
-          id: uuidv4(),
-        },
-      ]);
+      setWeb({
+        url: "",
+        version: "",
+      });
     }
   };
 
@@ -453,15 +435,14 @@ export default function AppBuild({
         ...android,
         {
           minVersion: "",
+          version: "",
           architecture: "",
           screenDPI: "",
           apk: undefined,
           url: "",
           id: uuidv4(),
-          walletConnectVersion: "",
           packageId: "",
           versionCode: "",
-          dateListedInRegistry: undefined,
         },
       ]);
     } else if (platform === "ios") {
@@ -469,25 +450,22 @@ export default function AppBuild({
         ...ios,
         {
           minVersion: "",
+          version: "",
           architecture: "",
           screenDPI: "",
           ipa: undefined,
           url: "",
           id: uuidv4(),
-          walletConnectVersion: "",
           packageId: "",
           versionCode: "",
-          dateListedInRegistry: undefined,
         },
       ]);
-    } else if (platform === "web") {
-      setWeb((prevState) => [...prevState, { id: uuidv4(), url: "" }]);
     }
   };
 
   const handlePlatformStateChange = (
     app: "android" | "ios" | "web",
-    id: string,
+    id: string | undefined,
     newState: AndroidState | IosState | webState
   ) => {
     if (app === "android") {
@@ -503,11 +481,7 @@ export default function AppBuild({
         );
       });
     } else if (app === "web") {
-      setWeb((prevWeb) => {
-        return prevWeb.map((item) =>
-          item.id === id ? (newState as webState) : item
-        );
-      });
+      setWeb(newState as webState);
     }
   };
 
@@ -604,19 +578,10 @@ export default function AppBuild({
 
           {isWeb && (
             <AppBuildRow label="Web App">
-              {web.map((webState, index) => (
-                <WebContainer
-                  webState={webState}
-                  key={index}
-                  handleWebState={handlePlatformStateChange}
-                />
-              ))}
-              <div
-                className="mt-4 underline cursor-pointer"
-                onClick={() => handleAddNewFile("web")}
-              >
-                Add new url
-              </div>
+              <WebContainer
+                webState={web}
+                handleWebState={handlePlatformStateChange}
+              />
             </AppBuildRow>
           )}
 

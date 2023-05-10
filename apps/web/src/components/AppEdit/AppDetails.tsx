@@ -11,6 +11,8 @@ import {
   SelectValue,
   Button,
   Switch,
+  Checkbox,
+  DatePicker,
 } from "ui";
 import ReactSelect from "react-select";
 import { toast } from "sonner";
@@ -19,6 +21,12 @@ import iso6391 from "iso-639-1";
 import Spinner from "../Spinner";
 import { categories, subCategories } from "../../lib/utils";
 import Web3 from "web3";
+import { set } from "date-fns";
+
+type toggleDateAndWalletFileds = {
+  hasWalletConnect: boolean;
+  isListedInRegistry: boolean;
+};
 
 const AppDetailsRow = ({
   children,
@@ -76,6 +84,29 @@ export default function AppDetails({
   const [contractArr, setContractArr] = useState<string[]>([]);
   const [tags, setTags] = useState<string>();
   const [isSelfModerated, setIsSelfModerated] = useState<boolean>(false);
+  const [listDate, setListDate] = useState<Date | undefined>();
+  const [walletApiVersion, setWalletApiVersion] = useState<string>();
+  const [allowedCountries, setAllowedCountries] = useState<string[]>([]);
+  const [deniedCountries, setDeniedCountries] = useState<string[]>([]);
+  const [language, setLanguage] = useState<string[]>([]);
+  const [minimumAge, setMinimumAge] = useState<number>(0);
+  const [version, setVersion] = useState<string>();
+
+  const [showCheckbox, setShowCheckbox] = useState<toggleDateAndWalletFileds>({
+    hasWalletConnect: true,
+    isListedInRegistry: true,
+  });
+
+  const toggleDateAndWalletFileds = (type: keyof toggleDateAndWalletFileds) => {
+    setShowCheckbox((prevState) => ({
+      ...prevState,
+      [type]: !prevState[type],
+    }));
+  };
+
+  const handleDateChange = (date: Date) => {
+    setListDate(date);
+  };
 
   const removeContractAddress = () => {
     if (contractArr.length > 0) {
@@ -91,6 +122,7 @@ export default function AppDetails({
   };
 
   useEffect(() => {
+    //for chains and contracts fields
     if (metadata.chains && metadata.contractAddress) {
       const tempChainIdArr = metadata.chains;
       const tempContractArr = tempChainIdArr.map((x: number, idx: number) => {
@@ -106,12 +138,7 @@ export default function AppDetails({
       setContractArr(tempContractArr);
       setContractCounter(tempChainIdArr.length);
     }
-  }, [metadata]);
 
-  const [allowedCountries, setAllowedCountries] = useState<string[]>([]);
-  const [deniedCountries, setDeniedCountries] = useState<string[]>([]);
-
-  useEffect(() => {
     if (metadata.allowedCountries) {
       setAllowedCountries(metadata.allowedCountries);
     }
@@ -124,9 +151,6 @@ export default function AppDetails({
       setIsSelfModerated(metadata.isSelfModerated);
     }
   }, [metadata]);
-
-  const [language, setLanguage] = useState<string[]>([]);
-  const [minimumAge, setMinimumAge] = useState<number>(0);
 
   useEffect(() => {
     if (metadata.name) {
@@ -164,13 +188,17 @@ export default function AppDetails({
     if (metadata.version) {
       setVersion(metadata.version);
     }
-  }, [metadata]);
 
-  const [version, setVersion] = useState<string>();
-
-  useEffect(() => {
     if (metadata.tags) {
       setTags(metadata.tags.join(","));
+    }
+
+    if (metadata.walletApiVersion) {
+      setWalletApiVersion(metadata.walletApiVersion[0]);
+    }
+
+    if (metadata.listDate) {
+      setListDate(new Date(metadata.listDate));
     }
   }, [metadata]);
 
@@ -246,6 +274,142 @@ export default function AppDetails({
     }
     return true;
   }
+
+  const handleSave = () => {
+    const saving = async (
+      resolve: (value: any) => void,
+      reject: (value: any) => void
+    ) => {
+      try {
+        if (!storage || !sdk) return;
+
+        setSaving(true);
+
+        if (chainIdArr.length === 0) {
+          throw new Error("Chain Id is required");
+        }
+
+        if (!name && !metadata.name) {
+          throw new Error("Name is required");
+        }
+        metadata.name = name;
+
+        if (!description && !metadata.description) {
+          throw new Error("Description is required");
+        }
+        metadata.description = description;
+
+        if (!appUrl && !metadata.appUrl) {
+          throw new Error("URL is required");
+        }
+        metadata.appUrl = appUrl;
+
+        //////////////////
+        if (showCheckbox.isListedInRegistry) {
+          if (!listDate && !metadata.listDate) {
+            throw new Error("listdate is required");
+          }
+          metadata.listDate = listDate?.toString();
+        }
+        metadata.isListed = showCheckbox.isListedInRegistry;
+
+        if (walletApiVersion) {
+          if (!metadata.walletApiVersion) {
+            metadata.walletApiVersion = [walletApiVersion];
+          } else if (metadata.walletApiVersion) {
+            metadata.walletApiVersion = [walletApiVersion];
+            //metadata.walletApiVersion.push(walletApiVersion);
+          }
+        }
+        //////////////////////
+
+        if (repoUrl) {
+          metadata.repoUrl = repoUrl;
+        }
+
+        if (dappId) {
+          metadata.dappId = dappId;
+        }
+
+        if (chainIdArr.length <= 0) {
+          throw new Error("Select Chain ID");
+        }
+        metadata.chains = chainIdArr;
+
+        if (contractArr) {
+          const contracts: { chain: number; address: string }[] =
+            chainIdArr.reduce(
+              (
+                acc: { chain: number; address: string }[],
+                chain: number,
+                idx: number
+              ) => {
+                if (contractArr[idx] && contractArr[idx].length > 0) {
+                  acc.push({
+                    chain: chain,
+                    address: contractArr[idx],
+                  });
+                }
+                return acc;
+              },
+              []
+            );
+
+          const invalidAddress = await validateAddresses(contracts);
+          if (invalidAddress !== true) {
+            throw new Error(
+              `${invalidAddress.address} is not a valid address on ${
+                invalidAddress.chain === 1 ? "Ethereum" : "Polygon"
+              }`
+            );
+          }
+          metadata.contractAddress = contracts;
+        }
+
+        metadata.allowedCountries = allowedCountries;
+        metadata.deniedCountries = deniedCountries;
+        if (!category && !metadata.category) {
+          throw new Error("Category is required");
+        }
+        metadata.category = category;
+
+        if (subCategory) {
+          metadata.subCategory = subCategory;
+        }
+
+        if (!language && !metadata.language) {
+          throw new Error("Language is required");
+        }
+        metadata.language = language;
+        metadata.minimumAge = minimumAge;
+
+        if (!version && !metadata.version) {
+          throw new Error("Version is required");
+        }
+        metadata.version = version;
+        if (tags) {
+          metadata.tags = tags.split(/[, ]+/).map((tag) => tag.trim());
+        }
+
+        metadata.isSelfModerated = isSelfModerated;
+
+        resolve("done");
+        setSaving(false);
+      } catch (e: any) {
+        setSaving(false);
+        console.log(e.message);
+        reject(e.message);
+      }
+    };
+
+    toast.promise(new Promise((resolve, reject) => saving(resolve, reject)), {
+      success: `Successfully saved data`,
+      error: (data) => {
+        return data;
+      },
+      loading: `saving....`,
+    });
+  };
 
   return (
     <div className="flex flex-col items-center justify-start w-full rounded-lg bg-white shadow-[0_20_20_60_#0000000D] overflow-hidden">
@@ -556,139 +720,64 @@ export default function AppDetails({
                 onClick={() => setIsSelfModerated(!isSelfModerated)}
               />
             </div>
+
+            <div className="flex flex-row gap-x-2 w-full">
+              <div className="flex items-center space-x-2 w-[50%]">
+                <Checkbox
+                  onClick={(e) => {
+                    toggleDateAndWalletFileds("isListedInRegistry");
+                  }}
+                  checked={showCheckbox["isListedInRegistry"]}
+                  id="registry-check"
+                />
+                <Label htmlFor="registry-check">Listed in registry</Label>
+              </div>
+              {showCheckbox["isListedInRegistry"] && (
+                <div className="flex flex-col gap-y-2 w-[50%]">
+                  <DatePicker
+                    onDateChange={handleDateChange}
+                    defaultDate={listDate}
+                  />
+                </div>
+              )}
+            </div>
+            <div className="flex flex-row gap-x-2 w-full">
+              <div className="flex items-center space-x-2 w-[50%]">
+                <Checkbox
+                  onClick={(e) => {
+                    toggleDateAndWalletFileds("hasWalletConnect");
+                  }}
+                  checked={showCheckbox["hasWalletConnect"]}
+                  id="wallet-connect-check"
+                />
+                <Label htmlFor="wallet-connect-check">
+                  Does your app use wallet connect?
+                </Label>
+              </div>
+              {showCheckbox["hasWalletConnect"] && (
+                <div className="flex flex-col gap-y-2 w-[50%]">
+                  <Select
+                    value={walletApiVersion}
+                    onValueChange={(v) => {
+                      setWalletApiVersion(v);
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select wallet version" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="v1">v1</SelectItem>
+                      <SelectItem value="v2">v2</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
           </AppDetailsRow>
 
           <div className="w-full flex flex-row justify-end gap-x-4">
             <Button variant="outline">Cancel</Button>
-            <Button
-              disabled={saving}
-              onClick={async () => {
-                const saving = async (
-                  resolve: (value: any) => void,
-                  reject: (value: any) => void
-                ) => {
-                  try {
-                    if (!storage || !sdk) return;
-
-                    setSaving(true);
-
-                    if (chainIdArr.length === 0) {
-                      throw new Error("Chain Id is required");
-                    }
-
-                    if (!name && !metadata.name) {
-                      throw new Error("Name is required");
-                    }
-                    metadata.name = name;
-
-                    if (!description && !metadata.description) {
-                      throw new Error("Description is required");
-                    }
-                    metadata.description = description;
-
-                    if (!appUrl && !metadata.appUrl) {
-                      throw new Error("URL is required");
-                    }
-                    metadata.appUrl = appUrl;
-
-                    if (repoUrl) {
-                      metadata.repoUrl = repoUrl;
-                    }
-
-                    if (dappId) {
-                      metadata.dappId = dappId;
-                    }
-
-                    if (chainIdArr.length <= 0) {
-                      throw new Error("Select Chain ID");
-                    }
-                    metadata.chains = chainIdArr;
-
-                    if (contractArr) {
-                      const contracts: { chain: number; address: string }[] =
-                        chainIdArr.reduce(
-                          (
-                            acc: { chain: number; address: string }[],
-                            chain: number,
-                            idx: number
-                          ) => {
-                            if (
-                              contractArr[idx] &&
-                              contractArr[idx].length > 0
-                            ) {
-                              acc.push({
-                                chain: chain,
-                                address: contractArr[idx],
-                              });
-                            }
-                            return acc;
-                          },
-                          []
-                        );
-
-                      const invalidAddress = await validateAddresses(contracts);
-                      if (invalidAddress !== true) {
-                        throw new Error(
-                          `${
-                            invalidAddress.address
-                          } is not a valid address on ${
-                            invalidAddress.chain === 1 ? "Ethereum" : "Polygon"
-                          }`
-                        );
-                      }
-                      metadata.contractAddress = contracts;
-                    }
-
-                    metadata.allowedCountries = allowedCountries;
-                    metadata.deniedCountries = deniedCountries;
-                    if (!category && !metadata.category) {
-                      throw new Error("Category is required");
-                    }
-                    metadata.category = category;
-
-                    if (subCategory) {
-                      metadata.subCategory = subCategory;
-                    }
-
-                    if (!language && !metadata.language) {
-                      throw new Error("Language is required");
-                    }
-                    metadata.language = language;
-                    metadata.minimumAge = minimumAge;
-
-                    if (!version && !metadata.version) {
-                      throw new Error("Version is required");
-                    }
-                    metadata.version = version;
-                    if (tags) {
-                      metadata.tags = tags
-                        .split(/[, ]+/)
-                        .map((tag) => tag.trim());
-                    }
-
-                    metadata.isSelfModerated = isSelfModerated;
-
-                    resolve("done");
-                    setSaving(false);
-                  } catch (e: any) {
-                    setSaving(false);
-                    console.log(e.message);
-                    reject(e.message);
-                  }
-                };
-
-                toast.promise(
-                  new Promise((resolve, reject) => saving(resolve, reject)),
-                  {
-                    success: `Successfully saved data`,
-                    error: (data) => {
-                      return data;
-                    },
-                    loading: `saving....`,
-                  }
-                );
-              }}
-            >
+            <Button disabled={saving} onClick={handleSave}>
               Save
             </Button>
           </div>
