@@ -16,8 +16,7 @@ import {
   DatePicker,
 } from "ui";
 import Spinner from "../Spinner";
-import { Value } from "@radix-ui/react-select";
-import { platform } from "os";
+import AppUploadContainer from "../AppUploadContainer";
 
 type checkboxState = {
   android: boolean;
@@ -56,17 +55,10 @@ type IosState = {
   dateListedInRegistry: Date | undefined;
 };
 
-type downloadBaseUrlsType = {
-  platform: "android" | "ios" | "web";
-  architecture: string | undefined;
-  dateListedInRegistry: string | undefined;
-  minVersion: string | undefined;
-  packageId: string | undefined;
-  screenDPI: string | undefined;
-  versionCode: string | undefined;
-  walletConnectVersion: string | undefined;
+type webState = {
   url: string | undefined;
-}[];
+  id: string;
+};
 
 const AppBuildRow = ({
   children,
@@ -99,369 +91,36 @@ const AppBuildRow = ({
   );
 };
 
-const AppUploadContainer = ({
-  platformState,
-  handlePlatformStateChange,
-  app,
+const WebContainer = ({
+  webState,
+  handleWebState,
 }: {
-  platformState: any;
-  handlePlatformStateChange: (
-    app: "android" | "ios",
+  webState: any;
+  handleWebState: (
+    app: "android" | "ios" | "web",
     id: string,
-    newState: AndroidState | IosState
+    newState: AndroidState | IosState | webState
   ) => void;
-  app: string;
 }) => {
-  const [showFileds, setShowFields] = useState<toggleDateAndWalletFileds>({
-    hasWalletConnect: platformState.walletConnectVersion ? true : false,
-    isListedInRegistry: platformState.dateListedInRegistry ? true : false,
-  });
-
-  const toggleDateAndWalletFileds = (type: keyof toggleDateAndWalletFileds) => {
-    setShowFields((prevState) => ({
-      ...prevState,
-      [type]: !prevState[type],
-    }));
-  };
-
-  const handleDateChange = (date: Date) => {
-    // Do something with the selected date, e.g., update the state or call a function
-    console.log("Selected date:", date);
-    const newState = {
-      ...platformState,
-      dateListedInRegistry: date,
-    };
-    handlePlatformStateChange(
-      app as "android" | "ios",
-      platformState.id,
-      newState
-    );
-  };
-
   return (
-    <>
-      <div className="flex items-center justify-center w-full">
-        <label
-          htmlFor={`dropzone-file-${platformState.id}`}
-          className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600"
-        >
-          <div className="flex flex-col items-center justify-center pt-5 pb-6">
-            <svg
-              aria-hidden="true"
-              className="w-10 h-10 mb-3 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-              ></path>
-            </svg>
-            <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
-              <span className="font-semibold">Click to upload</span> or drag and
-              drop
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              {app === "android" ? "APK" : "IPA"}
-            </p>
-          </div>
-          <input
-            id={`dropzone-file-${platformState.id}`}
-            type="file"
-            accept={app === "android" ? ".apk" : ".ipa"}
-            className="hidden"
-            onChange={(e) => {
-              if (!e.target.files || !e.target.files[0]) return;
-              if (app === "android") {
-                const newState = {
-                  ...platformState,
-                  apk: e.target.files[0],
-                };
-                handlePlatformStateChange(
-                  app as "android" | "ios",
-                  platformState.id,
-                  newState
-                );
-                e.target.value = "";
-              } else {
-                const newState = {
-                  ...platformState,
-                  ipa: e.target.files[0],
-                };
-                handlePlatformStateChange(
-                  app as "android" | "ios",
-                  platformState.id,
-                  newState
-                );
-                e.target.value = "";
-              }
-            }}
-          />
-        </label>
-      </div>
-      {platformState?.apk ||
-        (platformState?.url && (
-          <div className="w-full h-full justify-center border border-[#2678FD] rounded-lg p-4 flex flex-col gap-y-3">
-            <div className="flex flex-row items-center justify-between">
-              <div className="flex flex-row gap-x-2 w-[80%]">
-                <div className="w-8 h-8 bg-[#EDF4FF] rounded-full flex items-center justify-center">
-                  <File className="w-4 h-4 text-[#2678FD]" />
-                </div>
-
-                <div className="flex flex-col gap-y-1 w-[70%]">
-                  <p className="font-medium text-sm truncate">
-                    {platformState?.apk?.name ?? "uploaded apk file"}
-                  </p>
-                  <p className="text-sm text-[#475467]">
-                    {platformState?.apk &&
-                      `${(platformState.apk.size / 1024 / 1024).toFixed(2)} MB`}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => {
-                  const newState = {
-                    ...platformState,
-                    apk: undefined,
-                    url: "",
-                  };
-                  handlePlatformStateChange(
-                    app as "android" | "ios",
-                    platformState.id,
-                    newState
-                  );
-                }}
-                className="ease-in-out transition-all active:scale-90"
-              >
-                <Trash className="h-4 w-4 text-[#667085]" />
-              </button>
-            </div>
-          </div>
-        ))}
-      {platformState?.ipa && (
-        <div className="w-full h-full justify-center border border-[#2678FD] rounded-lg p-4 flex flex-col gap-y-3">
-          <div className="flex flex-row items-center justify-between">
-            <div className="flex flex-row gap-x-2 w-[80%]">
-              <div className="w-8 h-8 bg-[#EDF4FF] rounded-full flex items-center justify-center">
-                <File className="w-4 h-4 text-[#2678FD]" />
-              </div>
-
-              <div className="flex flex-col gap-y-1 w-[70%]">
-                <p className="font-medium text-sm truncate">
-                  {platformState.ipa.name}
-                </p>
-                <p className="text-sm text-[#475467]">
-                  {(platformState.ipa.size / 1024 / 1024).toFixed(2)}
-                  MB
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => {
-                const newState = {
-                  ...platformState,
-                  ipa: undefined,
-                  url: "",
-                };
-                handlePlatformStateChange(
-                  app as "android" | "ios",
-                  platformState.id,
-                  newState
-                );
-              }}
-              className="ease-in-out transition-all active:scale-90"
-            >
-              <Trash className="h-4 w-4 text-[#667085]" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      <br />
-
-      <div className="flex flex-row gap-x-2 w-full">
-        <div className="flex flex-col gap-y-2 w-[50%]">
-          <Label>Architecture</Label>
-          <Select
-            value={platformState.architecture}
-            onValueChange={(v) => {
-              const newState = {
-                ...platformState,
-                architecture: v as any,
-              };
-              handlePlatformStateChange(
-                app as "android" | "ios",
-                platformState.id,
-                newState
-              );
-            }}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select architecture" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex flex-col gap-y-2 w-[50%]">
-          <Label>Screen DPI</Label>
-          <Select
-            value={platformState.screenDPI}
-            onValueChange={(v) => {
-              const newState = {
-                ...platformState,
-                screenDPI: v as any,
-              };
-              handlePlatformStateChange(
-                app as "android" | "ios",
-                platformState.id,
-                newState
-              );
-            }}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select screen DPI" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="flex flex-col gap-y-2">
-        <Label>
-          {`Minimum Version`}
-          <span className="text-red-500">*</span>
-        </Label>
-        <Input
-          placeholder="10.0.0"
-          required
-          value={platformState.minVersion}
-          onChange={(e) => {
-            const newState = {
-              ...platformState,
-              minVersion: e.target.value,
-            };
-            handlePlatformStateChange(
-              app as "android" | "ios",
-              platformState.id,
-              newState
-            );
-          }}
-        />
-      </div>
-      <div className="flex flex-row gap-x-2 w-full">
-        <div className="flex flex-col gap-y-2 w-[50%]">
-          <Label>
-            {`Package ID`}
-            <span className="text-red-500">*</span>
-          </Label>
-          <Input
-            //placeholder="10.0.0"
-            required
-            value={platformState.packageId}
-            onChange={(e) => {
-              const newState = {
-                ...platformState,
-                packageId: e.target.value,
-              };
-              handlePlatformStateChange(
-                app as "android" | "ios",
-                platformState.id,
-                newState
-              );
-            }}
-          />
-        </div>
-        <div className="flex flex-col gap-y-2 w-[50%]">
-          <Label>
-            {`Version Code`}
-            <span className="text-red-500">*</span>
-          </Label>
-          <Input
-            //placeholder="10.0.0"
-            required
-            value={platformState.versionCode}
-            onChange={(e) => {
-              const newState = {
-                ...platformState,
-                versionCode: e.target.value,
-              };
-              handlePlatformStateChange(
-                app as "android" | "ios",
-                platformState.id,
-                newState
-              );
-            }}
-          />
-        </div>
-      </div>
-      <div className="flex flex-row gap-x-2 w-full">
-        <div className="flex items-center space-x-2 w-[50%]">
-          <Checkbox
-            onClick={(e) => {
-              toggleDateAndWalletFileds("isListedInRegistry");
-            }}
-            checked={showFileds["isListedInRegistry"]}
-            id="registry-check"
-          />
-          <Label htmlFor="registry-check">Listed in registry</Label>
-        </div>
-        {showFileds["isListedInRegistry"] && (
-          <div className="flex flex-col gap-y-2 w-[50%]">
-            <DatePicker
-              onDateChange={handleDateChange}
-              defaultDate={platformState.dateListedInRegistry}
-            />
-          </div>
-        )}
-      </div>
-      <div className="flex flex-row gap-x-2 w-full">
-        <div className="flex items-center space-x-2 w-[50%]">
-          <Checkbox
-            onClick={(e) => {
-              toggleDateAndWalletFileds("hasWalletConnect");
-            }}
-            checked={showFileds["hasWalletConnect"]}
-            id="wallet-connect-check"
-          />
-          <Label htmlFor="wallet-connect-check">
-            Does your app use wallet connect?
-          </Label>
-        </div>
-        {showFileds["hasWalletConnect"] && (
-          <div className="flex flex-col gap-y-2 w-[50%]">
-            <Select
-              value={platformState.walletConnectVersion}
-              onValueChange={(v) => {
-                const newState = {
-                  ...platformState,
-                  walletConnectVersion: v as any,
-                };
-                handlePlatformStateChange(
-                  app as "android" | "ios",
-                  platformState.id,
-                  newState
-                );
-              }}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select wallet version" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="v1">v1</SelectItem>
-                <SelectItem value="v2">v2</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-      </div>
-    </>
+    <div className="flex flex-col gap-y-2">
+      <Label>
+        URL
+        <span className="text-red-500">*</span>
+      </Label>
+      <Input
+        placeholder="https://bitpack.me"
+        required
+        value={webState.url}
+        onChange={(e) => {
+          const newState = {
+            ...webState,
+            url: e.target.value,
+          };
+          handleWebState("web", webState.id, newState);
+        }}
+      />
+    </div>
   );
 };
 
@@ -515,53 +174,99 @@ export default function AppBuild({
     },
   ]);
 
+  const [web, setWeb] = useState<webState[]>([
+    {
+      url: "",
+      id: uuidv4(),
+    },
+  ]);
+
   const { mutateAsync: upload } = useStorageUpload();
   const isAndroid = appType["android"];
   const isWeb = appType["web"];
   const isIOS = appType["ios"];
 
-  console.log("andy", android);
-  console.log("ios", ios);
-
   console.log("metadata build", metadata);
 
   useEffect(() => {
-    if (metadata.downloadBaseUrls.length > 0) {
+    if (metadata.downloadBaseUrls?.length > 0) {
       const androidFiles = metadata.downloadBaseUrls.filter(
         (item: any) => item.platform === "android"
       );
-      const iosFiles = metadata.downloadBaseUrls.filter(
+      const iosFiles = metadata.downloadBaseUrls?.filter(
         (item: any) => item.platform === "ios"
       );
+
+      const webUrls = metadata.downloadBaseUrls?.filter(
+        (item: any) => item.platform === "web"
+      );
       if (androidFiles.length > 0) {
-        setAndroid(androidFiles);
-        console.log("andimeta", androidFiles);
+        setAndroid(
+          androidFiles.map((item: any) => ({
+            ...item,
+            id: uuidv4(),
+            apk: undefined,
+          }))
+        );
       }
       if (iosFiles.length > 0) {
-        console.log("iosmeta", iosFiles);
-        setIos(iosFiles);
+        setIos(
+          iosFiles.map((item: any) => ({
+            ...item,
+            id: uuidv4(),
+            ipa: undefined,
+          }))
+        );
+      }
+      if (webUrls.length > 0) {
+        setWeb(webUrls.map((item: any) => ({ ...item, id: uuidv4() })));
       }
     }
   }, [metadata]);
 
   const uploadToIpfs = async () => {
-    //set more checks for empty required fields
+    const isAndroidValid = android.every(
+      (item) =>
+        (item.url || item.apk) &&
+        item.minVersion &&
+        item.packageId &&
+        item.versionCode
+    );
+    const isIosValid = ios.every(
+      (item) =>
+        (item.url || item.ipa) &&
+        item.minVersion &&
+        item.packageId &&
+        item.versionCode
+    );
+
+    const isWebValid = web.every((item) => item.url);
+
+    if (
+      (appType["android"] && !isAndroidValid) ||
+      (appType["ios"] && !isIosValid) ||
+      (appType["web"] && !isWebValid)
+    ) {
+      toast.message("Please fill in the required fields");
+      return;
+    }
+
     const androidFiles = android.filter(
       (item) =>
-        item.apk && item.minVersion && item.packageId && item.versionCode
+        (item.url || item.apk) &&
+        item.minVersion &&
+        item.packageId &&
+        item.versionCode
     );
     const iosFiles = ios.filter(
       (item) =>
-        item.ipa && item.minVersion && item.packageId && item.versionCode
+        (item.url || item.ipa) &&
+        item.minVersion &&
+        item.packageId &&
+        item.versionCode
     );
 
-    if (
-      (appType["android"] && androidFiles.length === 0) ||
-      (appType["ios"] && iosFiles.length === 0)
-    ) {
-      toast.message("Upload the file and fill the the required fields");
-      return;
-    }
+    const webUrls = web.filter((item) => item.url);
 
     const uploadFiles = async (
       resolve: (value: any) => void,
@@ -571,6 +276,10 @@ export default function AppBuild({
         setIsSaving(true);
 
         const androidUploadPromises = androidFiles.map(async (item) => {
+          if (item.url) {
+            return [item.url];
+          }
+
           return await upload({
             data: [item.apk],
             options: {
@@ -581,6 +290,10 @@ export default function AppBuild({
         });
 
         const iosUploadPromises = iosFiles.map(async (item) => {
+          if (item.url) {
+            return [item.url];
+          }
+
           return await upload({
             data: [item.ipa],
             options: {
@@ -595,8 +308,13 @@ export default function AppBuild({
 
         console.log("ipaurl", ipaUploadUrls);
         console.log("apkurl", apkUploadUrls);
+        console.log("weburl", webUrls);
 
         clearValues();
+
+        if (metadata.downloadBaseUrls) {
+          metadata.downloadBaseUrls = [];
+        }
 
         apkUploadUrls.forEach((apkUploadUrl, index) => {
           const newItem = {
@@ -609,14 +327,29 @@ export default function AppBuild({
             packageId: androidFiles[index].packageId,
             versionCode: androidFiles[index].versionCode,
             dateListedInRegistry:
-              androidFiles[index].dateListedInRegistry?.toDateString(),
+              androidFiles[index].dateListedInRegistry?.toString(),
           };
+
+          // if (!metadata.downloadBaseUrls) {
+          //   metadata.downloadBaseUrls = [newItem];
+          // } else if (metadata.downloadBaseUrls) {
+          //   const existingIndex = metadata.downloadBaseUrls.findIndex(
+          //     (item: any) =>
+          //       item.platform === "android" &&
+          //       item.fileIdx === androidFiles[index].id
+          //   );
+          //   if (existingIndex !== -1) {
+          //     metadata.downloadBaseUrls[existingIndex] = newItem;
+          //   } else if (existingIndex === -1) {
+          //     metadata.downloadBaseUrls.push(newItem);
+          //   }
+          // }
+
           if (!metadata.downloadBaseUrls) {
             metadata.downloadBaseUrls = [newItem];
           } else if (metadata.downloadBaseUrls) {
             metadata.downloadBaseUrls.push(newItem);
           }
-          console.log("apkMetadata", metadata);
         });
 
         ipaUploadUrls.forEach((ipaUploadUrl, index) => {
@@ -630,19 +363,61 @@ export default function AppBuild({
             packageId: iosFiles[index].packageId,
             versionCode: iosFiles[index].versionCode,
             dateListedInRegistry:
-              iosFiles[index].dateListedInRegistry?.toDateString(),
+              iosFiles[index].dateListedInRegistry?.toString(),
           };
+
+          // if (!metadata.downloadBaseUrls) {
+          //   metadata.downloadBaseUrls = [newItem];
+          // } else if (metadata.downloadBaseUrls) {
+          //   const existingIndex = metadata?.downloadBaseUrls?.findIndex(
+          //     (item: any) =>
+          //       item.platform === "ios" && item.fileIdx === iosFiles[index].id
+          //   );
+          //   if (existingIndex !== -1) {
+          //     metadata.downloadBaseUrls[existingIndex] = newItem;
+          //   } else {
+          //     metadata.downloadBaseUrls.push(newItem);
+          //   }
+          // }
+
           if (!metadata.downloadBaseUrls) {
             metadata.downloadBaseUrls = [newItem];
           } else if (metadata.downloadBaseUrls) {
             metadata.downloadBaseUrls.push(newItem);
           }
-          console.log("iosMetadata", metadata);
         });
 
+        webUrls.forEach((webUrl, index) => {
+          const newItem = {
+            url: webUrl.url,
+            platform: "web",
+          };
+          // if (!metadata.downloadBaseUrls) {
+          //   metadata.downloadBaseUrls = [newItem];
+          // } else if (metadata.downloadBaseUrls) {
+          //   const existingIndex = metadata?.downloadBaseUrls?.findIndex(
+          //     (item: any) =>
+          //       item.platform === "web" && item.fileIdx === webUrls[index].id
+          //   );
+          //   if (existingIndex !== -1) {
+          //     metadata.downloadBaseUrls[existingIndex] = newItem;
+          //   } else {
+          //     metadata.downloadBaseUrls.push(newItem);
+          //   }
+          // }
+
+          if (!metadata.downloadBaseUrls) {
+            metadata.downloadBaseUrls = [newItem];
+          } else if (metadata.downloadBaseUrls) {
+            metadata.downloadBaseUrls.push(newItem);
+          }
+        });
+
+        console.log("updatedMetadata", metadata);
         setIsSaving(false);
         return resolve("done");
       } catch (e: any) {
+        console.log("catch-error", e);
         return reject(e.message);
       }
     };
@@ -652,6 +427,7 @@ export default function AppBuild({
       {
         success: `Successfully saved data`,
         error: (data) => {
+          console.log("toast-error", data);
           return `${data}`;
         },
         loading: `Saving the Data...`,
@@ -690,9 +466,17 @@ export default function AppBuild({
         },
       ]);
     }
+    if (appType["web"]) {
+      setWeb([
+        {
+          url: "",
+          id: uuidv4(),
+        },
+      ]);
+    }
   };
 
-  const handleAddNewFile = (platform: "android" | "ios") => {
+  const handleAddNewFile = (platform: "android" | "ios" | "web") => {
     if (platform === "android") {
       setAndroid([
         ...android,
@@ -709,7 +493,7 @@ export default function AppBuild({
           dateListedInRegistry: undefined,
         },
       ]);
-    } else {
+    } else if (platform === "ios") {
       setIos([
         ...ios,
         {
@@ -725,13 +509,15 @@ export default function AppBuild({
           dateListedInRegistry: undefined,
         },
       ]);
+    } else if (platform === "web") {
+      setWeb((prevState) => [...prevState, { id: uuidv4(), url: "" }]);
     }
   };
 
   const handlePlatformStateChange = (
-    app: "android" | "ios",
+    app: "android" | "ios" | "web",
     id: string,
-    newState: AndroidState | IosState
+    newState: AndroidState | IosState | webState
   ) => {
     if (app === "android") {
       setAndroid((prevAndroid) => {
@@ -739,10 +525,16 @@ export default function AppBuild({
           item.id === id ? (newState as AndroidState) : item
         );
       });
-    } else {
+    } else if (app === "ios") {
       setIos((prevIos) => {
         return prevIos.map((item) =>
           item.id === id ? (newState as IosState) : item
+        );
+      });
+    } else if (app === "web") {
+      setWeb((prevWeb) => {
+        return prevWeb.map((item) =>
+          item.id === id ? (newState as webState) : item
         );
       });
     }
@@ -756,6 +548,7 @@ export default function AppBuild({
           <Spinner />
         </div>
       )}
+
       {!isMetaLoading && (
         <div className="p-4 md:p-8 w-full gap-y-6 flex flex-col">
           <div className="flex flex-col gap-y-2">
@@ -783,7 +576,6 @@ export default function AppBuild({
                 }}
                 checked={appType["web"]}
                 id="web"
-                disabled
               />
               <Label htmlFor="web">Web</Label>
             </div>
@@ -820,30 +612,6 @@ export default function AppBuild({
             </AppBuildRow>
           )}
 
-          {/* {isWeb && (
-            <AppBuildRow label="Web App">
-              <div className="flex flex-col gap-y-2">
-                <Label>
-                  URL
-                  <span className="text-red-500">*</span>
-                </Label>
-                <Input placeholder="https://bitpack.me" />
-              </div>
-
-              <div className="flex flex-col gap-y-2">
-                <Label>Optimized for mobile?</Label>
-                <Switch />
-              </div>
-
-              <div className="flex flex-col gap-y-2">
-                <Label>
-                  Okay for meroku to make an installable of this web app?
-                </Label>
-                <Switch />
-              </div>
-            </AppBuildRow>
-          )} */}
-
           {isIOS && (
             <AppBuildRow label="iOS">
               {ios.map((iosState, index) => (
@@ -859,6 +627,24 @@ export default function AppBuild({
                 onClick={() => handleAddNewFile("ios")}
               >
                 Add new file
+              </div>
+            </AppBuildRow>
+          )}
+
+          {isWeb && (
+            <AppBuildRow label="Web App">
+              {web.map((webState, index) => (
+                <WebContainer
+                  webState={webState}
+                  key={index}
+                  handleWebState={handlePlatformStateChange}
+                />
+              ))}
+              <div
+                className="mt-4 underline cursor-pointer"
+                onClick={() => handleAddNewFile("web")}
+              >
+                Add new url
               </div>
             </AppBuildRow>
           )}
@@ -881,11 +667,6 @@ export default function AppBuild({
           </div>
         </div>
       )}
-      {/* <div className="flex flex-row justify-end gap-x-4">
-          <Button>Save</Button>
-          <Button variant={"outline"}>Cancel</Button>
-        </div>   */}
-      {/* </div> */}
     </div>
   );
 }

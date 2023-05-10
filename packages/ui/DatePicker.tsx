@@ -9,12 +9,16 @@ import { Button } from "./Button";
 import { Calendar } from "./Calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./Popover";
 
+function isValidDate(d: Date) {
+  return !isNaN(d.getTime());
+}
+
 export function DatePicker({
   onDateChange,
   defaultDate,
 }: {
   onDateChange: (date: Date) => void;
-  defaultDate?: string;
+  defaultDate?: string | Date;
 }) {
   const [date, setDate] = React.useState<Date>(
     new Date(Date.parse(defaultDate as string)) || new Date()
@@ -35,7 +39,7 @@ export function DatePicker({
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {date ? format(date, "PPP") : <span>Pick a date</span>}
+          {isValidDate(date) ? format(date, "PPP") : <span>Pick a date</span>}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0">
