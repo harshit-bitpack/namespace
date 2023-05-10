@@ -36,7 +36,7 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
     event SaleCreated(uint256 indexed tokenId, uint256 price);
     event UpdatedTokenURI(uint256 indexed tokenId, string uri);
     
-    uint128 public trading_fees;    // fees in Gwei
+    uint128 public trading_fees;  // fees percentage in Gwei ex 2Gwei = 2%
     uint128 public renew_fees;    // fees in wei
     uint128 public renew_life;    // timeperiod for which the app name can be renewed by current owner
     uint128 public token_life;    // timeperiod for which the app name is valid
@@ -101,7 +101,7 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
      * @dev Throws if the current timestamp is more than expiry timestamp
      */
     function _checkExpiry(uint256 _tokenId) internal view virtual {
-        require(expireOn[_tokenId] > block.timestamp, "Cant continue, Token Expired");
+        require(expireOn[_tokenId] > block.timestamp, "Cant continue, Name Token Expired");
     }
 
     /**
@@ -270,8 +270,8 @@ contract AppNFTUpgradeable is Initializable, ERC721Upgradeable, ERC721Enumerable
 
 
     /**
-     * @notice set platform trading_fees for the sale of .app NFT
-     * @dev this is the fees deducted whenever a sale is completed by the buyer
+     * @notice set platform trading_fees percentage for the sale of .app NFT
+     * @dev this is the fee percentage deducted whenever a sale is completed by the buyer
      * @param _new_trading_fees uint128 value which is fees in percentage (add 10^9)
      */
     function setTradingFees(uint128 _new_trading_fees) external onlyOwner {

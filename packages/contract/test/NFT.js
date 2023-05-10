@@ -571,7 +571,7 @@ describe(".app & .dev NFT minting", function () {
                 otherAccount.address,
                 "mint.domain"
               )
-          ).to.be.revertedWith("Subdomain not allowed");
+          ).to.be.revertedWith("Error: Subdomain or space found");
       });
 
       it("Should convert uppercase appNames to lower case when minted with or without `.app`", async function () {
@@ -615,6 +615,32 @@ describe(".app & .dev NFT minting", function () {
           await expect(await appNFT.tokensName(4)).to.equal(
             `mysecondappname.app`
           );
+      });
+
+      it("Should revert if appname has space", async function () {
+        const {
+          devNFT,
+          appNFT,
+          owner,
+          otherAccount,
+          devName,
+          appName,
+          appNameLower,
+          dev_uri,
+          app_uri,
+          specialdAppNames,
+        } = await loadFixture(deployNFTsFixture);
+
+        await basicMintDone(devNFT, appNFT, dev_uri, app_uri, devName, appName, appNameLower);
+
+          await expect(
+            appNFT
+              .connect(otherAccount)
+              .safeMintAppNFT(
+                otherAccount.address,
+                "mint my domain"
+              )
+          ).to.be.revertedWith("Error: Subdomain or space found");
       });
     });
 
@@ -739,6 +765,217 @@ describe(".app & .dev NFT minting", function () {
         await expect(
           appNFT.connect(otherAccount).buyAppNFT(2, { value: Number(price) })
         ).to.be.revertedWith("This NFT is not on sale");
+      });
+    });
+  });
+
+  describe("Renew .appNFT", function () {
+    describe("Validations", function () {
+      it("Should revert with the right error if try to renew token before expiry", async function () {
+        const {
+          devNFT,
+          appNFT,
+          otherAccount,
+          account1,
+          devName,
+          appName,
+          appNameLower,
+          dev_uri,
+          app_uri,
+        } = await loadFixture(deployNFTsFixture);
+
+        await basicMintDone(devNFT, appNFT, dev_uri, app_uri, devName, appName, appNameLower);
+        const tokenID = await appNFT.tokenIdForName(
+          `${appNameLower.account1}.app`
+        );
+
+        const renew_fees = await appNFT.renew_fees();
+
+        await expect(
+          appNFT
+            .connect(account1)
+            .renewToken(tokenID, { value: renew_fees })
+        ).to.be.revertedWith("Token is not expired yet");
+      });
+
+      it("Should revert with the right error if renew with less renew fees", async function () {
+        const {
+          devNFT,
+          appNFT,
+          otherAccount,
+          account1,
+          devName,
+          appName,
+          appNameLower,
+          dev_uri,
+          app_uri,
+        } = await loadFixture(deployNFTsFixture);
+
+        await basicMintDone(devNFT, appNFT, dev_uri, app_uri, devName, appName, appNameLower);
+        const tokenID = await appNFT.tokenIdForName(
+          `${appNameLower.account1}.app`
+        );
+
+        const token_life = await appNFT.token_life();
+        await time.increase(token_life.toNumber() + 1);
+
+        const renew_fees = await appNFT.renew_fees();
+
+        await expect(
+          appNFT
+            .connect(account1)
+            .renewToken(tokenID, { value: (Number(renew_fees) / 2).toString() })
+        ).to.be.revertedWith("Insufficient renew fees");
+      });
+
+      it("Should revert with the right error if try to update Metadata URI after tokens life is over", async function () {
+        const {
+          devNFT,
+          appNFT,
+          account1,
+          otherAccount,
+          devName,
+          appName,
+          appNameLower,
+          dev_uri,
+          app_uri,
+        } = await loadFixture(deployNFTsFixture);
+
+        await basicMintDone(devNFT, appNFT, dev_uri, app_uri, devName, appName, appNameLower);
+        const tokenID = await appNFT.tokenIdForName(
+          `${appNameLower.account1}.app`
+        );
+
+        const token_life = await appNFT.token_life();
+        await time.increase(token_life.toNumber() + 1);
+
+        await expect(
+          appNFT.connect(account1).updateTokenURI(tokenID, "newURI")
+        ).to.be.revertedWith("Cant continue, Name Token Expired");
+      });
+
+      it("Shouldn't fail if token is renewed after expiry providing sufficient renew fees", async function () {
+        const {
+          devNFT,
+          appNFT,
+          otherAccount,
+          account1,
+          devName,
+          appName,
+          appNameLower,
+          dev_uri,
+          app_uri,
+        } = await loadFixture(deployNFTsFixture);
+
+        await basicMintDone(devNFT, appNFT, dev_uri, app_uri, devName, appName, appNameLower);
+        const tokenID = await appNFT.tokenIdForName(
+          `${appNameLower.account1}.app`
+        );
+
+        const token_life = await appNFT.token_life();
+        await time.increase(token_life.toNumber() + 1);
+
+        const renew_fees = await appNFT.renew_fees();
+
+        await expect(
+          appNFT
+            .connect(account1)
+            .renewToken(tokenID, { value: renew_fees })
+        ).not.to.be.reverted;
+
+        await expect(
+          appNFT.connect(account1).updateTokenURI(tokenID, "newURI")
+        ).not.to.be.reverted;
+
+      });
+
+      it("Should revert with the right error if non owner try claim token within renew life(grace period)", async function () {
+        const {
+          devNFT,
+          appNFT,
+          otherAccount,
+          account1,
+          devName,
+          appName,
+          appNameLower,
+          dev_uri,
+          app_uri,
+        } = await loadFixture(deployNFTsFixture);
+
+        await basicMintDone(devNFT, appNFT, dev_uri, app_uri, devName, appName, appNameLower);
+        const tokenID = await appNFT.tokenIdForName(
+          `${appNameLower.account1}.app`
+        );
+
+        const token_life = await appNFT.token_life();
+        await time.increase(token_life.toNumber() + 1);
+
+        const renew_fees = await appNFT.renew_fees();
+
+        await expect(
+          appNFT.connect(otherAccount).claimToken(tokenID, {value: renew_fees})
+        ).to.be.revertedWith("Token not available for claiming yet");
+
+      });
+
+      it("Should revert with the right error if non owner renew with less renew fees", async function () {
+        const {
+          devNFT,
+          appNFT,
+          otherAccount,
+          account1,
+          devName,
+          appName,
+          appNameLower,
+          dev_uri,
+          app_uri,
+        } = await loadFixture(deployNFTsFixture);
+
+        await basicMintDone(devNFT, appNFT, dev_uri, app_uri, devName, appName, appNameLower);
+        const tokenID = await appNFT.tokenIdForName(
+          `${appNameLower.account1}.app`
+        );
+
+        const token_life = await appNFT.token_life();
+        const renew_life = await appNFT.renew_life();
+        await time.increase(token_life.toNumber() + renew_life.toNumber() + 1);
+
+        const renew_fees = await appNFT.renew_fees();
+
+        await expect(
+          appNFT.connect(otherAccount).claimToken(tokenID, {value: (Number(renew_fees)/2).toString()})
+        ).to.be.revertedWith("Insufficient renew fees");
+      });
+
+      it("Shouldn't fail if token is renewed by non owner after expiry+renew period providing sufficient renew fees", async function () {
+        const {
+          devNFT,
+          appNFT,
+          otherAccount,
+          account1,
+          devName,
+          appName,
+          appNameLower,
+          dev_uri,
+          app_uri,
+        } = await loadFixture(deployNFTsFixture);
+
+        await basicMintDone(devNFT, appNFT, dev_uri, app_uri, devName, appName, appNameLower);
+        const tokenID = await appNFT.tokenIdForName(
+          `${appNameLower.account1}.app`
+        );
+
+        const token_life = await appNFT.token_life();
+        const renew_life = await appNFT.renew_life();
+        await time.increase(token_life.toNumber() + renew_life.toNumber() + 1);
+
+        const renew_fees = await appNFT.renew_fees();
+
+        await expect(
+          appNFT.connect(otherAccount).claimToken(tokenID, {value: renew_fees})
+        ).not.to.be.reverted;
+
+        expect(await appNFT.ownerOf(tokenID)).to.equal(otherAccount.address);
       });
     });
   });

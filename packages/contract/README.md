@@ -18,6 +18,9 @@ npm run verifyAI            //to verify .appNFT contract
 
 npm run addDappNames        //to add reserved dappNames in the list to avoid their minting in .appNFT
 
+npm run upgradeDevProxy     //to upgrade proxy with new implementation of .devNFT
+npm run upgradeAppProxy     //to upgrade proxy with new implementation of .appNFT
+
 npx hardhat compile         //to compile NFT contracts
 npx hardhat test            //to test NFT contracts
 
