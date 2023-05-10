@@ -36,14 +36,23 @@ abstract contract ERC721NameStorageUpgradeable is Initializable, ERC721Upgradeab
         return _tokenId;
     }
 
-    function checkForSubDomain(string memory name) internal virtual{
+    // checks for sub domain and returns the name in lower case to maintain case-sensitivity
+    function checkAppName(string memory name) internal virtual returns (string memory){
         bytes memory nameBytes = bytes(name);
         uint256 length = nameBytes.length;
-        for(uint256 i=0; i < length-suffixLength; i++){
+        bytes memory nameBytesLower = new bytes(length);
+        for(uint256 i=0; i < length; i++){
             if(nameBytes[i] == '.'){
                 revert("Subdomain not allowed");
+            }else{
+                if ((uint8(nameBytes[i]) >= 65) && (uint8(nameBytes[i]) <= 90)) {
+                    nameBytesLower[i] = bytes1(uint8(nameBytes[i]) + 32);
+                } else {
+                    nameBytesLower[i] = nameBytes[i];
+                }
             }
         }
+        return string(abi.encodePacked(string(nameBytesLower),string(nameSuffix)));
     }
 
     /**
@@ -57,11 +66,9 @@ abstract contract ERC721NameStorageUpgradeable is Initializable, ERC721Upgradeab
     function _validateName(string calldata str) internal virtual returns (string memory) {
         bytes calldata strBytes = bytes(str);
 
-        // if length of string is less than suffix length then append nameSuffix and return the valid name
+        // if length of string is less than suffix length then check and return the valid name
         if (strBytes.length < suffixLength) {
-            string memory validName = string(abi.encodePacked(string(strBytes),string(nameSuffix)));
-            checkForSubDomain(validName);
-            return validName;
+            return checkAppName(str);
         }
         uint256 strBytesLength = strBytes.length;
         // get the last characters of the name
@@ -69,16 +76,14 @@ abstract contract ERC721NameStorageUpgradeable is Initializable, ERC721Upgradeab
 
         // if str.length == suffix.length & last characters of the name is equal to nameSuffix then revert else 
         // if str.length > name suffix.length & last characters are nameSuffix then the str is already suffixed else
-        // if the last characters of the name != nameSuffix then append nameSuffix and return the valid name
+        // if the last characters of the name != nameSuffix then check and return the valid name
         if(strBytes.length == suffixLength && keccak256(strBytesSuffix) == keccak256(nameSuffix)){
             revert("ERC721NameStorage: Name not found");
         }else if(keccak256(strBytesSuffix) == keccak256(nameSuffix)){
-            checkForSubDomain(str);
-           return str;
+            bytes memory strBytesPrefix = strBytes[:strBytesLength-suffixLength];
+            return checkAppName(string(strBytesPrefix));
         }else{
-            string memory validName = string(abi.encodePacked(string(strBytes),string(nameSuffix)));
-            checkForSubDomain(validName);
-            return validName;
+            return checkAppName(str);
         }
     }
 
