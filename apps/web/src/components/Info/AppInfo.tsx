@@ -188,6 +188,35 @@ export default function AppInfo({ metaData }: { metaData: any }) {
             )}
           </div>
         </div>
+
+        <div className="flex flex-col gap-y-1">
+          <p className="text-[#667085] font-medium text-[16px]">
+            Available On Platform
+          </p>
+          <div className="flex flex-row flex-wrap gap-x-1 gap-y-1">
+            {metaData.availableOnPlatform ? (
+              metaData.availableOnPlatform.map(
+                (platform: string, idx: number) => (
+                  <span
+                    key={idx}
+                    className="text-[#363F72] rounded-lg bg-[#F8F9FC] py-[2px] px-2 font-medium text-[12px]"
+                  >
+                    {platform}
+                  </span>
+                )
+              )
+            ) : (
+              <>
+                <span className="text-[#363F72] rounded-lg bg-[#F8F9FC] py-[2px] px-2 font-medium text-[12px]">
+                  foo
+                </span>
+                <span className="text-[#363F72] rounded-lg bg-[#F8F9FC] py-[2px] px-2 font-medium text-[12px]">
+                  bar
+                </span>
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       {metaData.contractAddress ? (
@@ -269,7 +298,7 @@ export default function AppInfo({ metaData }: { metaData: any }) {
                 </p>
               </div>
 
-              {metaData.downloadBaseUrls.platform !== "web" ? (
+              {obj.platform !== "web" ? (
                 <>
                   <div className="flex flex-col gap-y-1">
                     <p className="text-[#667085] font-medium text-[16px]">
@@ -309,15 +338,6 @@ export default function AppInfo({ metaData }: { metaData: any }) {
 
                   <div className="flex flex-col gap-y-1">
                     <p className="text-[#667085] font-medium text-[16px]">
-                      Version
-                    </p>
-                    <p className="text-[#344054] font-semibold text-[16px]">
-                      {obj.version ?? "0.6.9"}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-col gap-y-1">
-                    <p className="text-[#667085] font-medium text-[16px]">
                       Version Code
                     </p>
                     <p className="text-[#344054] font-semibold text-[16px]">
@@ -337,6 +357,15 @@ export default function AppInfo({ metaData }: { metaData: any }) {
               ) : (
                 <></>
               )}
+
+              <div className="flex flex-col gap-y-1">
+                <p className="text-[#667085] font-medium text-[16px]">
+                  Version
+                </p>
+                <p className="text-[#344054] font-semibold text-[16px]">
+                  {obj.version ?? "0.6.9"}
+                </p>
+              </div>
 
               <div className="flex flex-col gap-y-1">
                 <p className="text-[#667085] font-medium text-[16px]">

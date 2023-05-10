@@ -12,6 +12,8 @@ import NavbarApp from "@/components/Navbar/App";
 import Spacer from "@/components/Spacer";
 import GlobalSearchIcon from "@/public/global-search.svg";
 import Spinner from "@/components/Spinner";
+import appABI from "../../config/appABI.json";
+import devABI from "../../config/devABI.json";
 
 export default function App({
   biconomy_api_key,
@@ -35,10 +37,12 @@ export default function App({
     if (!search || !sdk) return;
 
     const appContract = await sdk.getContract(
-      env.NEXT_PUBLIC_APP_CONTRACT_ADDRESS
+      process.env.NEXT_PUBLIC_APP_CONTRACT_ADDRESS as string,
+      appABI
     );
     const devContract = await sdk.getContract(
-      env.NEXT_PUBLIC_DEV_CONTRACT_ADDRESS
+      process.env.NEXT_PUBLIC_DEV_CONTRACT_ADDRESS as string,
+      devABI
     );
 
     const _available = {} as {
@@ -46,7 +50,7 @@ export default function App({
     };
 
     try {
-      const data1 = await appContract.call("tokenIdForAppName", [
+      const data1 = await appContract.call("tokenIdForName", [
         search.replaceAll(".app", "") + ".app",
       ]);
       _available[`${search.replaceAll(".app", "")}.app`] = false;
@@ -59,7 +63,7 @@ export default function App({
     }
 
     // try {
-    //   const data2 = await devContract.call("tokenIdForDevName", [
+    //   const data2 = await devContract.call("tokenIdForName", [
     //     search.replaceAll(".dev", "") + ".dev",
     //   ]);
     //   _available[`${search.replaceAll(".dev", "")}.dev`] = false;
@@ -77,7 +81,8 @@ export default function App({
 
   // const isDevAlreadyMinted = async (sdk: ThirdwebSDK): Promise<boolean> => {
   //   const devContract = await sdk.getContract(
-  //     env.NEXT_PUBLIC_DEV_CONTRACT_ADDRESS
+  //     env.NEXT_PUBLIC_DEV_CONTRACT_ADDRESS,
+  //     devABI
   //   );
   //   const devBalance = await devContract.call("balanceOf", [address]);
   //   return devBalance !== 0;
@@ -101,9 +106,10 @@ export default function App({
           // }
 
           const appContract = await sdk.getContract(
-            env.NEXT_PUBLIC_APP_CONTRACT_ADDRESS
+            process.env.NEXT_PUBLIC_APP_CONTRACT_ADDRESS as string,
+            appABI
           );
-
+          console.log(appContract);
           // const data = await appContract.call(
           //     "safeMintAppNFT",
           //     address,
@@ -111,27 +117,31 @@ export default function App({
           //     name
           // );
           // console.log(data);
-
-          const tx = appContract.prepare("safeMintAppNFT", [
-            address,
-            name,
-            name,
-          ]);
-          tx.setGaslessOptions({
-            biconomy: {
-              apiId: "c6720081-99a3-4295-bfb1-248f1750f5fa",
-              apiKey: biconomy_api_key,
-              deadlineSeconds: 60,
-            },
-          });
-          const data = await tx.send();
-          console.log(data);
+          console.log("address : ", address);
+          console.log("name : ", name);
+          try {
+            const tx = appContract.prepare("safeMintAppNFT", [address, name]);
+            console.log("transaction : ", tx);
+            tx.setGaslessOptions({
+              biconomy: {
+                apiId: "968f6012-b00c-4093-b39f-dcd3efe9fcb5",
+                apiKey: biconomy_api_key,
+                deadlineSeconds: 100,
+              },
+            });
+            const data = await tx.send();
+            console.log(data);
+          } catch (e: any) {
+            console.log(e);
+            reject(e.message);
+          }
         } else if (nftType === "dev") {
           // if (await isDevAlreadyMinted(sdk)) {
           //   throw Error("You already claimed a Dev Domain");
           // }
           const devContract = await sdk.getContract(
-            env.NEXT_PUBLIC_DEV_CONTRACT_ADDRESS
+            process.env.NEXT_PUBLIC_DEV_CONTRACT_ADDRESS as string,
+            devABI
           );
 
           // const data = await devContract.call(

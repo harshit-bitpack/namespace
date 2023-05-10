@@ -13,6 +13,7 @@ import { ThirdwebSDK, useStorageUpload } from "@thirdweb-dev/react";
 import { useSDK } from "@thirdweb-dev/react";
 import { toast } from "sonner";
 import { env } from "@/env/schema.mjs";
+import appABI from "../../config/appABI.json";
 
 const AppImagesRow = ({
   children,
@@ -243,9 +244,10 @@ export default function AppImages({
   const savingMetaDataOnChain = async (metaData: any, sdk: ThirdwebSDK) => {
     const uri = await uploadFile(metaData);
     const appContract = await sdk.getContract(
-      env.NEXT_PUBLIC_APP_CONTRACT_ADDRESS
+      process.env.NEXT_PUBLIC_APP_CONTRACT_ADDRESS as string,
+      appABI
     );
-    const tokenId = await appContract.call("tokenIdForAppName", [appName]);
+    const tokenId = await appContract.call("tokenIdForName", [appName]);
     if (!tokenId) {
       throw new Error("Invalid app name");
     }

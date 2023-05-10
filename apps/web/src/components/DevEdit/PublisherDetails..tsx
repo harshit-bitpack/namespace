@@ -6,6 +6,7 @@ import { env } from "@/env/schema.mjs";
 import useAppMetadata from "@/lib/hooks/useFetchMetadata";
 import { toast } from "sonner";
 import { File, Trash } from "lucide-react";
+import devABI from "../../config/devABI.json";
 
 const PublisherDetailsRow = ({
   children,
@@ -277,11 +278,12 @@ export default function PublisherDetails({ devName }: { devName: string }) {
               const uri = await storage.upload(newMetadata);
 
               const appContract = await sdk.getContract(
-                env.NEXT_PUBLIC_DEV_CONTRACT_ADDRESS
+                process.env.NEXT_PUBLIC_DEV_CONTRACT_ADDRESS as string,
+                devABI
               );
 
               try {
-                const tokenId = await appContract.call("tokenIdForDevName", [
+                const tokenId = await appContract.call("tokenIdForName", [
                   devName,
                 ]);
 

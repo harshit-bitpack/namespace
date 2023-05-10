@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useSDK } from "@thirdweb-dev/react";
 import { useAccount } from "wagmi";
-
 import { env } from "@/env/schema.mjs";
+import appABI from "../../config/appABI.json";
+import devABI from "../../config/devABI.json";
 
 export default function useOwnedDomains() {
   const { address } = useAccount();
@@ -21,10 +22,12 @@ export default function useOwnedDomains() {
 
       try {
         const appContract = await sdk.getContract(
-          env.NEXT_PUBLIC_APP_CONTRACT_ADDRESS
+          process.env.NEXT_PUBLIC_APP_CONTRACT_ADDRESS as string,
+          appABI
         );
         const devContract = await sdk.getContract(
-          env.NEXT_PUBLIC_DEV_CONTRACT_ADDRESS
+          process.env.NEXT_PUBLIC_DEV_CONTRACT_ADDRESS as string,
+          devABI
         );
 
         const appBalance = await appContract.call("balanceOf", [address]);
@@ -46,10 +49,10 @@ export default function useOwnedDomains() {
         ).map((i) => Number(i));
 
         const appNames = await Promise.all(
-          appIds.map((i) => appContract.call("tokensAppName", [i]))
+          appIds.map((i) => appContract.call("tokensName", [i]))
         );
         const devNames = await Promise.all(
-          devIds.map((i) => devContract.call("tokensDevName", [i]))
+          devIds.map((i) => devContract.call("tokensName", [i]))
         );
 
         setAppNfts(appNames);
