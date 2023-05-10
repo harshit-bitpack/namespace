@@ -10,7 +10,7 @@ import { Calendar } from "./Calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./Popover";
 
 function isValidDate(d: Date) {
-  return !isNaN(d.getTime());
+  return !isNaN(d?.getTime());
 }
 
 export function DatePicker({

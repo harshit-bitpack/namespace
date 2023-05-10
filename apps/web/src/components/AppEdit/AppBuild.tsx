@@ -190,7 +190,7 @@ export default function AppBuild({
 
   useEffect(() => {
     if (metadata.downloadBaseUrls?.length > 0) {
-      const androidFiles = metadata.downloadBaseUrls.filter(
+      const androidFiles = metadata.downloadBaseUrls?.filter(
         (item: any) => item.platform === "android"
       );
       const iosFiles = metadata.downloadBaseUrls?.filter(
@@ -310,6 +310,19 @@ export default function AppBuild({
         console.log("apkurl", apkUploadUrls);
         console.log("weburl", webUrls);
 
+        let availableOnPlatform: ("android" | "ios" | "web")[] = [];
+
+        if (androidFiles.length > 0) {
+          availableOnPlatform.push("android");
+        }
+        if (iosFiles.length > 0) {
+          availableOnPlatform.push("ios");
+        }
+        if (webUrls.length > 0) {
+          availableOnPlatform.push("web");
+        }
+
+        metadata.availableOnPlatform = availableOnPlatform;
         clearValues();
 
         if (metadata.downloadBaseUrls) {
@@ -329,21 +342,6 @@ export default function AppBuild({
             dateListedInRegistry:
               androidFiles[index].dateListedInRegistry?.toString(),
           };
-
-          // if (!metadata.downloadBaseUrls) {
-          //   metadata.downloadBaseUrls = [newItem];
-          // } else if (metadata.downloadBaseUrls) {
-          //   const existingIndex = metadata.downloadBaseUrls.findIndex(
-          //     (item: any) =>
-          //       item.platform === "android" &&
-          //       item.fileIdx === androidFiles[index].id
-          //   );
-          //   if (existingIndex !== -1) {
-          //     metadata.downloadBaseUrls[existingIndex] = newItem;
-          //   } else if (existingIndex === -1) {
-          //     metadata.downloadBaseUrls.push(newItem);
-          //   }
-          // }
 
           if (!metadata.downloadBaseUrls) {
             metadata.downloadBaseUrls = [newItem];
@@ -366,20 +364,6 @@ export default function AppBuild({
               iosFiles[index].dateListedInRegistry?.toString(),
           };
 
-          // if (!metadata.downloadBaseUrls) {
-          //   metadata.downloadBaseUrls = [newItem];
-          // } else if (metadata.downloadBaseUrls) {
-          //   const existingIndex = metadata?.downloadBaseUrls?.findIndex(
-          //     (item: any) =>
-          //       item.platform === "ios" && item.fileIdx === iosFiles[index].id
-          //   );
-          //   if (existingIndex !== -1) {
-          //     metadata.downloadBaseUrls[existingIndex] = newItem;
-          //   } else {
-          //     metadata.downloadBaseUrls.push(newItem);
-          //   }
-          // }
-
           if (!metadata.downloadBaseUrls) {
             metadata.downloadBaseUrls = [newItem];
           } else if (metadata.downloadBaseUrls) {
@@ -392,19 +376,6 @@ export default function AppBuild({
             url: webUrl.url,
             platform: "web",
           };
-          // if (!metadata.downloadBaseUrls) {
-          //   metadata.downloadBaseUrls = [newItem];
-          // } else if (metadata.downloadBaseUrls) {
-          //   const existingIndex = metadata?.downloadBaseUrls?.findIndex(
-          //     (item: any) =>
-          //       item.platform === "web" && item.fileIdx === webUrls[index].id
-          //   );
-          //   if (existingIndex !== -1) {
-          //     metadata.downloadBaseUrls[existingIndex] = newItem;
-          //   } else {
-          //     metadata.downloadBaseUrls.push(newItem);
-          //   }
-          // }
 
           if (!metadata.downloadBaseUrls) {
             metadata.downloadBaseUrls = [newItem];
