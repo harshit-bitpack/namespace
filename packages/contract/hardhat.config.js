@@ -81,6 +81,14 @@ module.exports = {
       gasPrice: 20000000000,
       gasMultiplier: 2,
     },
+    polygon: {
+      url: `https://polygon-mainnet.chainstacklabs.com`,
+      accounts: [process.env.PRIVATE_KEY], //add private key in this
+      chainId: 137,
+      live: true,
+      saveDeployments: true,
+      tags: ["mainnet"],
+    }
   },
   solidity: {
     compilers: [
