@@ -8,9 +8,17 @@ import Spacer from "@/components/Spacer";
 import Spinner from "@/components/Spinner";
 import AppEdit from "@/components/AppEdit";
 import DevEdit from "@/components/DevEdit";
+import { env } from "@/env/schema.mjs";
 
 // TODO: refactor to reusable components
-export default function EditInfo() {
+export default function EditInfo({
+  alchemy_api_key_urls,
+}: {
+  alchemy_api_key_urls: {
+    api_key_url_ethereum: string;
+    api_key_url_polygon: string;
+  };
+}) {
   const router = useRouter();
   const { address } = useAccount();
   const { isLoading, error, appNfts, devNfts } = useOwnedDomains();
@@ -72,7 +80,12 @@ export default function EditInfo() {
             </div>
 
             {/* .app nfts */}
-            {ext === "app" && <AppEdit appName={appName} />}
+            {ext === "app" && (
+              <AppEdit
+                appName={appName}
+                alchemy_api_key_urls={alchemy_api_key_urls}
+              />
+            )}
 
             {/* .dev nfts */}
             {ext === "dev" && <DevEdit devName={appName} />}
@@ -83,4 +96,15 @@ export default function EditInfo() {
       <Spacer />
     </div>
   );
+}
+
+export async function getServerSideProps() {
+  return {
+    props: {
+      alchemy_api_key_urls: {
+        api_key_url_ethereum: env.ALCHEMY_API_KEY_URL_ETHEREUM,
+        api_key_url_polygon: env.ALCHEMY_API_KEY_URL_POLYGON,
+      },
+    },
+  };
 }

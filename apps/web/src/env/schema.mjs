@@ -7,6 +7,9 @@ import { z } from "zod";
  */
 const server = z.object({
     NODE_ENV: z.enum(["development", "test", "production"]),
+    BICONOMY_API_KEY: z.string(),
+    ALCHEMY_API_KEY_URL_ETHEREUM: z.string(),
+    ALCHEMY_API_KEY_URL_POLYGON: z.string()
 });
 
 /**
@@ -16,7 +19,6 @@ const server = z.object({
 const client = z.object({
     NEXT_PUBLIC_APP_CONTRACT_ADDRESS: z.string(),
     NEXT_PUBLIC_DEV_CONTRACT_ADDRESS: z.string(),
-    NEXT_PUBLIC_BICONOMY_API_KEY: z.string(),
 });
 
 /**
@@ -25,13 +27,17 @@ const client = z.object({
  *
  * @type {Record<keyof z.infer<typeof server> | keyof z.infer<typeof client>, string | undefined>}
  */
+// console.log("process.env.BICONOMY_API_KEY :", process.env.BICONOMY_API_KEY);
+// console.log("process.env.ALCHEMY_API_KEY : ", process.env.ALCHEMY_API_KEY_URL);
 const processEnv = {
     NODE_ENV: process.env.NODE_ENV,
     NEXT_PUBLIC_APP_CONTRACT_ADDRESS:
         process.env.NEXT_PUBLIC_APP_CONTRACT_ADDRESS,
     NEXT_PUBLIC_DEV_CONTRACT_ADDRESS:
         process.env.NEXT_PUBLIC_DEV_CONTRACT_ADDRESS,
-    NEXT_PUBLIC_BICONOMY_API_KEY: process.env.NEXT_PUBLIC_BICONOMY_API_KEY,
+    BICONOMY_API_KEY: process.env.BICONOMY_API_KEY,
+    ALCHEMY_API_KEY_URL_ETHEREUM: process.env.ALCHEMY_API_KEY_URL_ETHEREUM,
+    ALCHEMY_API_KEY_URL_POLYGON: process.env.ALCHEMY_API_KEY_URL_POLYGON
 };
 
 // Don't touch the part below

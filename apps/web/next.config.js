@@ -3,6 +3,14 @@ module.exports = {
   reactStrictMode: true,
   transpilePackages: ["ui"],
   images: {
-    domains: ["picsum.photos"],
+    domains: ["picsum.photos", "ipfs.thirdwebcdn.com"],
   },
+  async rewrites() {
+		return [
+			{
+				source: "/",
+				destination: "https://meroku-homepage.webflow.io/",
+			},
+		];
+	},
 };

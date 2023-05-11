@@ -23,7 +23,6 @@ export default function Owned() {
 
           <h3 className="text-[#475467] text-lg md:text-lg">
             View your minted and claimed{" "}
-            <span className="text-blue-500">.dev</span> and{" "}
             <span className="text-blue-500">.app</span> domains
           </h3>
         </div>

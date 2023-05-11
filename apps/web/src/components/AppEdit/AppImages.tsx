@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "ui";
 import {
   UseFormResetField,
@@ -7,11 +7,13 @@ import {
   UseFormRegister,
   UseFormGetValues,
   FieldValues,
+  UseFormSetValue,
 } from "react-hook-form";
 import { ThirdwebSDK, useStorageUpload } from "@thirdweb-dev/react";
 import { useSDK } from "@thirdweb-dev/react";
 import { toast } from "sonner";
 import { env } from "@/env/schema.mjs";
+import appABI from "../../config/appABI.json";
 
 const AppImagesRow = ({
   children,
@@ -54,14 +56,20 @@ const UploadImage = ({
   return (
     <div className="flex flex-col md:flex-row gap-y-4 items-start gap-x-4 justify-between w-full">
       {watch(id) && getValues(id)?.length > 0 ? (
-        <Image
-          src={URL.createObjectURL(getValues(id)[0])}
-          alt="App logo"
-          width={100}
-          height={100}
-          className="rounded-lg hover:opacity-30 ease-in-out transition-all active:scale-90 cursor-pointer"
-          onClick={() => resetField(id)}
-        />
+        <>
+          <Image
+            src={
+              typeof getValues(id) === "object"
+                ? URL.createObjectURL(getValues(id)[0])
+                : getValues(id)
+            }
+            alt="App logo"
+            width={100}
+            height={100}
+            className="rounded-lg hover:opacity-30 ease-in-out transition-all active:scale-90 cursor-pointer"
+            onClick={() => resetField(id)}
+          />
+        </>
       ) : (
         // TODO
         <></>
@@ -111,6 +119,7 @@ export default function AppImages({
   resetField,
   watch,
   appName,
+  setValue,
 }: {
   metaData: any;
   isMetaLoading: any;
@@ -119,11 +128,35 @@ export default function AppImages({
   resetField: UseFormResetField<FieldValues>;
   watch: UseFormWatch<FieldValues>;
   appName: string;
+  setValue: UseFormSetValue<FieldValues>;
 }) {
   console.log("MetaData : ", metaData);
   const [isSaving, setIsSaving] = useState(false);
   const { mutateAsync: upload } = useStorageUpload();
   const sdk = useSDK();
+
+  useEffect(() => {
+    if (!metaData.images) {
+      return;
+    }
+
+    if (metaData.images.logo) {
+      setValue("dropzone-file-logo", metaData.images.logo);
+    }
+
+    if (metaData.images.banner) {
+      setValue("dropzone-file-banner", metaData.images.banner);
+    }
+
+    if (metaData.images.screenshots) {
+      for (let i = 0; i < metaData.images.screenshots.length; i++) {
+        setValue(
+          `dropzone-file-screenshot${i + 1}`,
+          metaData.images.screenshots[i]
+        );
+      }
+    }
+  }, [metaData, setValue]);
 
   const onSave = async () => {
     const updatingMetaData = async (
@@ -133,15 +166,21 @@ export default function AppImages({
       if (!sdk) return;
       setIsSaving(true);
       const logo = getValues("dropzone-file-logo")
-        ? getValues("dropzone-file-logo")[0]
+        ? typeof getValues(`dropzone-file-logo`) === "object"
+          ? getValues("dropzone-file-logo")[0]
+          : getValues("dropzone-file-logo")
         : undefined;
       const banner = getValues("dropzone-file-banner")
-        ? getValues("dropzone-file-banner")[0]
+        ? typeof getValues(`dropzone-file-banner`) === "object"
+          ? getValues("dropzone-file-banner")[0]
+          : getValues("dropzone-file-banner")
         : undefined;
       let screenshots = [];
       for (let i = 1; i <= 5; i++) {
         const screenshot = getValues(`dropzone-file-screenshot${i}`)
-          ? getValues(`dropzone-file-screenshot${i}`)[0]
+          ? typeof getValues(`dropzone-file-screenshot${i}`) === "object"
+            ? getValues(`dropzone-file-screenshot${i}`)[0]
+            : getValues(`dropzone-file-screenshot${i}`)
           : undefined;
         if (screenshot) {
           screenshots.push(screenshot);
@@ -151,19 +190,28 @@ export default function AppImages({
         metaData["images"] = {};
       }
       if (logo) {
-        metaData["images"]["logo"] = await uploadFile(logo);
+        metaData["images"]["logo"] =
+          typeof logo === "object" ? await uploadFile(logo) : logo;
+      } else {
+        metaData["images"]["logo"] = undefined;
       }
       if (banner) {
-        metaData["images"]["banner"] = await uploadFile(banner);
+        metaData["images"]["banner"] =
+          typeof banner === "object" ? await uploadFile(banner) : banner;
+      } else {
+        metaData["images"]["banner"] = undefined;
       }
       let screenshotsUrl: string[] = [];
       for (const screenshot of screenshots) {
-        const url = await uploadFile(screenshot);
+        let url: string;
+        if (typeof screenshot === "object") {
+          url = await uploadFile(screenshot);
+        } else {
+          url = screenshot;
+        }
         screenshotsUrl.push(url);
       }
-      ``;
       metaData["images"]["screenshots"] = screenshotsUrl;
-      console.log(" updated metadata : ", metaData);
       try {
         await savingMetaDataOnChain(metaData, sdk);
         resolve("done");
@@ -178,7 +226,7 @@ export default function AppImages({
       {
         success: `Successfully saved data`,
         error: (data) => {
-          return `${data}`;
+          return `Transaction Rejected`;
         },
         loading: `updating....`,
       }
@@ -196,9 +244,10 @@ export default function AppImages({
   const savingMetaDataOnChain = async (metaData: any, sdk: ThirdwebSDK) => {
     const uri = await uploadFile(metaData);
     const appContract = await sdk.getContract(
-      env.NEXT_PUBLIC_APP_CONTRACT_ADDRESS
+      process.env.NEXT_PUBLIC_APP_CONTRACT_ADDRESS as string,
+      appABI
     );
-    const tokenId = await appContract.call("tokenIdForAppName", [appName]);
+    const tokenId = await appContract.call("tokenIdForName", [appName]);
     if (!tokenId) {
       throw new Error("Invalid app name");
     }

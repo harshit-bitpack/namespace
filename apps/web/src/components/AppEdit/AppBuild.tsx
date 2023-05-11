@@ -1,18 +1,10 @@
 import { useStorageUpload } from "@thirdweb-dev/react";
-import { File, Trash } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
-import {
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Label,
-  Button,
-  Checkbox,
-} from "ui";
+import { Input, Label, Button, Checkbox } from "ui";
+import Spinner from "../Spinner";
+import AppUploadContainer from "../AppUploadContainer";
 
 type checkboxState = {
   android: boolean;
@@ -23,15 +15,30 @@ type checkboxState = {
 type AndroidState = {
   minVersion: string | undefined;
   architecture: string | undefined;
-  screenDpi: string | undefined;
+  screenDPI: string | undefined;
   apk: File | undefined;
+  url?: string | undefined;
+  id: string;
+  packageId: string | undefined;
+  versionCode: string | undefined;
+  version: string | undefined;
 };
 
 type IosState = {
   minVersion: string | undefined;
   architecture: string | undefined;
-  screenDpi: string | undefined;
+  screenDPI: string | undefined;
   ipa: File | undefined;
+  url?: string | undefined;
+  id: string;
+  packageId: string | undefined;
+  versionCode: string | undefined;
+  version: string | undefined;
+};
+
+type webState = {
+  url: string | undefined;
+  version: string | undefined;
 };
 
 const AppBuildRow = ({
@@ -65,6 +72,39 @@ const AppBuildRow = ({
   );
 };
 
+const WebContainer = ({
+  webState,
+  handleWebState,
+}: {
+  webState: any;
+  handleWebState: (
+    app: "web",
+    id: string | undefined,
+    newState: webState
+  ) => void;
+}) => {
+  return (
+    <div className="flex flex-col gap-y-2">
+      <Label>
+        URL
+        <span className="text-red-500">*</span>
+      </Label>
+      <Input
+        placeholder="https://bitpack.me"
+        required
+        value={webState.url}
+        onChange={(e) => {
+          const newState = {
+            ...webState,
+            url: e.target.value,
+          };
+          handleWebState("web", "", newState);
+        }}
+      />
+    </div>
+  );
+};
+
 export default function AppBuild({
   appName,
   metadata,
@@ -88,18 +128,34 @@ export default function AppBuild({
   };
 
   const [isSaving, setIsSaving] = useState(false);
-  const [android, setAndroid] = useState<AndroidState>({
-    minVersion: "",
-    architecture: "",
-    screenDpi: "",
-    apk: undefined,
-  });
+  const [android, setAndroid] = useState<AndroidState[]>([
+    {
+      minVersion: "",
+      version: "",
+      architecture: "",
+      screenDPI: "",
+      apk: undefined,
+      id: uuidv4(),
+      packageId: "",
+      versionCode: "",
+    },
+  ]);
+  const [ios, setIos] = useState<IosState[]>([
+    {
+      minVersion: "",
+      version: "",
+      architecture: "",
+      screenDPI: "",
+      ipa: undefined,
+      id: uuidv4(),
+      packageId: "",
+      versionCode: "",
+    },
+  ]);
 
-  const [ios, setIos] = useState<IosState>({
-    minVersion: "",
-    architecture: "",
-    screenDpi: "",
-    ipa: undefined,
+  const [web, setWeb] = useState<webState>({
+    url: "",
+    version: "",
   });
 
   const { mutateAsync: upload } = useStorageUpload();
@@ -107,100 +163,228 @@ export default function AppBuild({
   const isWeb = appType["web"];
   const isIOS = appType["ios"];
 
-  console.log("andy", android);
-  console.log("ios", ios);
+  console.log("metadata build", metadata);
+
+  useEffect(() => {
+    if (metadata.downloadBaseUrls?.length > 0) {
+      const androidFiles = metadata.downloadBaseUrls?.filter(
+        (item: any) => item.platform === "android"
+      );
+      const iosFiles = metadata.downloadBaseUrls?.filter(
+        (item: any) => item.platform === "ios"
+      );
+
+      const webUrls = metadata.downloadBaseUrls?.filter(
+        (item: any) => item.platform === "web"
+      );
+      if (androidFiles.length > 0) {
+        setAndroid(
+          androidFiles.map((item: any) => ({
+            ...item,
+            id: uuidv4(),
+            apk: undefined,
+          }))
+        );
+        setAppType((prevState) => ({
+          ...prevState,
+          android: true,
+        }));
+      }
+      if (iosFiles.length > 0) {
+        setIos(
+          iosFiles.map((item: any) => ({
+            ...item,
+            id: uuidv4(),
+            ipa: undefined,
+          }))
+        );
+        setAppType((prevState) => ({
+          ...prevState,
+          ios: true,
+        }));
+      }
+
+      if (webUrls.length > 0) {
+        setWeb(webUrls[0]);
+        setAppType((prevState) => ({
+          ...prevState,
+          web: true,
+        }));
+      }
+    }
+  }, [metadata]);
 
   const uploadToIpfs = async () => {
-    if ((appType["android"] && !android.apk) || (appType["ios"] && !ios.ipa)) {
-      toast.message("Upload the file");
-      return;
-    }
+    const isAndroidValid = android.every(
+      (item) =>
+        (item.url || item.apk) &&
+        item.minVersion &&
+        item.packageId &&
+        item.versionCode &&
+        item.version
+    );
+    const isIosValid = ios.every(
+      (item) =>
+        (item.url || item.ipa) &&
+        item.minVersion &&
+        item.packageId &&
+        item.versionCode &&
+        item.version
+    );
+
+    const isWebValid = Boolean(web.url);
 
     if (
-      (appType["android"] && !android.minVersion) ||
-      (appType["ios"] && !ios.minVersion)
+      (appType["android"] && !isAndroidValid) ||
+      (appType["ios"] && !isIosValid) ||
+      (appType["web"] && !isWebValid)
     ) {
-      toast.message("Minimum version is required");
+      toast.message("Please fill in the required fields");
       return;
     }
 
-    const uploadFile = async (
+    const androidFiles = android.filter(
+      (item) =>
+        (item.url || item.apk) &&
+        item.minVersion &&
+        item.packageId &&
+        item.versionCode &&
+        item.version
+    );
+    const iosFiles = ios.filter(
+      (item) =>
+        (item.url || item.ipa) &&
+        item.minVersion &&
+        item.packageId &&
+        item.versionCode &&
+        item.version
+    );
+
+    const webUrl = web.url;
+
+    const uploadFiles = async (
       resolve: (value: any) => void,
       reject: (value: any) => void
     ) => {
       try {
         setIsSaving(true);
 
-        let ipaUploadUrl: string[] = [];
-        let apkUploadUrl: string[] = [];
+        const androidUploadPromises = androidFiles.map(async (item) => {
+          if (item.url) {
+            return [item.url];
+          }
 
-        if (appType["android"] && apkUploadUrl.length === 0) {
-          apkUploadUrl = await upload({
-            data: [android.apk],
+          return await upload({
+            data: [item.apk],
             options: {
               uploadWithGatewayUrl: true,
               uploadWithoutDirectory: false,
             },
           });
-        }
+        });
 
-        if (appType["ios"] && ipaUploadUrl.length === 0) {
-          ipaUploadUrl = await upload({
-            data: [ios.ipa],
+        const iosUploadPromises = iosFiles.map(async (item) => {
+          if (item.url) {
+            return [item.url];
+          }
+
+          return await upload({
+            data: [item.ipa],
             options: {
               uploadWithGatewayUrl: true,
               uploadWithoutDirectory: false,
             },
           });
+        });
+
+        const apkUploadUrls = await Promise.all(androidUploadPromises);
+        const ipaUploadUrls = await Promise.all(iosUploadPromises);
+
+        let availableOnPlatform: ("android" | "ios" | "web")[] = [];
+
+        if (androidFiles.length > 0) {
+          availableOnPlatform.push("android");
+        }
+        if (iosFiles.length > 0) {
+          availableOnPlatform.push("ios");
+        }
+        if (isWebValid) {
+          availableOnPlatform.push("web");
         }
 
-        console.log("ipaurl", ipaUploadUrl[0]);
-        console.log("apkurl", apkUploadUrl[0]);
-
+        metadata.availableOnPlatform = availableOnPlatform;
         clearValues();
-        if (appType["android"] && apkUploadUrl.length > 0) {
+
+        if (metadata.downloadBaseUrls) {
+          metadata.downloadBaseUrls = [];
+        }
+
+        apkUploadUrls.forEach((apkUploadUrl, index) => {
           const newItem = {
             url: apkUploadUrl[0],
             platform: "android",
-            minVersion: android.minVersion,
-            architecture: android.architecture,
-            screenDPI: android.screenDpi,
+            minVersion: androidFiles[index].minVersion,
+            architecture: androidFiles[index].architecture,
+            screenDPI: androidFiles[index].screenDPI,
+            packageId: androidFiles[index].packageId,
+            versionCode: androidFiles[index].versionCode,
+            version: androidFiles[index].version,
           };
+
           if (!metadata.downloadBaseUrls) {
             metadata.downloadBaseUrls = [newItem];
           } else if (metadata.downloadBaseUrls) {
             metadata.downloadBaseUrls.push(newItem);
           }
-          console.log("apkMetadata", metadata);
-        }
+        });
 
-        if (appType["ios"] && ipaUploadUrl.length > 0) {
+        ipaUploadUrls.forEach((ipaUploadUrl, index) => {
           const newItem = {
             url: ipaUploadUrl[0],
             platform: "ios",
-            minVersion: ios.minVersion,
-            architecture: ios.architecture,
-            screenDPI: ios.screenDpi,
+            minVersion: iosFiles[index].minVersion,
+            architecture: iosFiles[index].architecture,
+            screenDPI: iosFiles[index].screenDPI,
+            packageId: iosFiles[index].packageId,
+            versionCode: iosFiles[index].versionCode,
+            version: iosFiles[index].version,
           };
+
           if (!metadata.downloadBaseUrls) {
             metadata.downloadBaseUrls = [newItem];
           } else if (metadata.downloadBaseUrls) {
             metadata.downloadBaseUrls.push(newItem);
           }
-          console.log("iosMetadata", metadata);
+        });
+
+        if (isWebValid) {
+          const newItem = {
+            url: webUrl,
+            platform: "web",
+          };
+
+          if (!metadata.downloadBaseUrls) {
+            metadata.downloadBaseUrls = [newItem];
+          } else if (metadata.downloadBaseUrls) {
+            metadata.downloadBaseUrls.push(newItem);
+          }
         }
+
+        console.log("updatedMetadata", metadata);
         setIsSaving(false);
         return resolve("done");
       } catch (e: any) {
+        console.log("catch-error", e);
         return reject(e.message);
       }
     };
 
     toast.promise(
-      new Promise((resolve, reject) => uploadFile(resolve, reject)),
+      new Promise((resolve, reject) => uploadFiles(resolve, reject)),
       {
         success: `Successfully saved data`,
         error: (data) => {
+          console.log("toast-error", data);
           return `${data}`;
         },
         loading: `Saving the Data...`,
@@ -210,369 +394,215 @@ export default function AppBuild({
 
   const clearValues = () => {
     if (appType["android"]) {
-      setAndroid({
-        minVersion: "",
-        architecture: "",
-        screenDpi: "",
-        apk: undefined,
-      });
+      setAndroid([
+        {
+          minVersion: "",
+          version: "",
+          architecture: "",
+          screenDPI: "",
+          apk: undefined,
+          id: uuidv4(),
+          packageId: "",
+          versionCode: "",
+        },
+      ]);
     }
     if (appType["ios"]) {
-      setIos({
-        minVersion: "",
-        architecture: "",
-        screenDpi: "",
-        ipa: undefined,
+      setIos([
+        {
+          minVersion: "",
+          version: "",
+          architecture: "",
+          screenDPI: "",
+          ipa: undefined,
+          id: uuidv4(),
+          packageId: "",
+          versionCode: "",
+        },
+      ]);
+    }
+    if (appType["web"]) {
+      setWeb({
+        url: "",
+        version: "",
       });
+    }
+  };
+
+  const handleAddNewFile = (platform: "android" | "ios" | "web") => {
+    if (platform === "android") {
+      setAndroid([
+        ...android,
+        {
+          minVersion: "",
+          version: "",
+          architecture: "",
+          screenDPI: "",
+          apk: undefined,
+          url: "",
+          id: uuidv4(),
+          packageId: "",
+          versionCode: "",
+        },
+      ]);
+    } else if (platform === "ios") {
+      setIos([
+        ...ios,
+        {
+          minVersion: "",
+          version: "",
+          architecture: "",
+          screenDPI: "",
+          ipa: undefined,
+          url: "",
+          id: uuidv4(),
+          packageId: "",
+          versionCode: "",
+        },
+      ]);
+    }
+  };
+
+  const handlePlatformStateChange = (
+    app: "android" | "ios" | "web",
+    id: string | undefined,
+    newState: AndroidState | IosState | webState
+  ) => {
+    if (app === "android") {
+      setAndroid((prevAndroid) => {
+        return prevAndroid.map((item) =>
+          item.id === id ? (newState as AndroidState) : item
+        );
+      });
+    } else if (app === "ios") {
+      setIos((prevIos) => {
+        return prevIos.map((item) =>
+          item.id === id ? (newState as IosState) : item
+        );
+      });
+    } else if (app === "web") {
+      setWeb(newState as webState);
     }
   };
 
   return (
     <div className="flex flex-col items-center justify-start w-full rounded-lg bg-white shadow-[0_20_20_60_#0000000D] overflow-hidden">
       {/* <div className="flex flex-col w-full"> */}
-      <div className="p-4 md:p-8 w-full gap-y-6 flex flex-col">
-        <div className="flex flex-col gap-y-2">
-          <h3 className="text-[#101828] text-2xl font-semibold">Build</h3>
-          <p className="text-[#475467] text-sm">Edit your app build details.</p>
+      {isMetaLoading && (
+        <div className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <Spinner />
         </div>
+      )}
 
-        <AppBuildRow label="App Type" isRequired>
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              onClick={(e) => {
-                handleCheckboxChange("android");
-              }}
-              checked={appType["android"]}
-              id="android"
-            />
-            <Label htmlFor="android">Android</Label>
+      {!isMetaLoading && (
+        <div className="p-4 md:p-8 w-full gap-y-6 flex flex-col">
+          <div className="flex flex-col gap-y-2">
+            <h3 className="text-[#101828] text-2xl font-semibold">Build</h3>
+            <p className="text-[#475467] text-sm">
+              Edit your app build details.
+            </p>
           </div>
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              onClick={(e) => {
-                handleCheckboxChange("web");
-              }}
-              checked={appType["web"]}
-              id="web"
-              disabled
-            />
-            <Label htmlFor="web">Web</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              onClick={(e) => {
-                handleCheckboxChange("ios");
-              }}
-              checked={appType["ios"]}
-              id="ios"
-            />
-            <Label htmlFor="ios">iOS</Label>
-          </div>
-        </AppBuildRow>
 
-        <hr />
-
-        {isAndroid && (
-          <AppBuildRow label="Android">
-            <div className="flex items-center justify-center w-full">
-              <label
-                htmlFor="dropzone-file-android"
-                className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600"
-              >
-                <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                  <svg
-                    aria-hidden="true"
-                    className="w-10 h-10 mb-3 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                    ></path>
-                  </svg>
-                  <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
-                    <span className="font-semibold">Click to upload</span> or
-                    drag and drop
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    APK
-                  </p>
-                </div>
-                <input
-                  id="dropzone-file-android"
-                  type="file"
-                  accept=".apk"
-                  className="hidden"
-                  onChange={(e) => {
-                    if (!e.target.files || !e.target.files[0]) return;
-                    setAndroid({ ...android, apk: e.target.files[0] });
-                    e.target.value = "";
-                  }}
-                />
-              </label>
-            </div>
-            {android.apk && (
-              <div className="w-full h-full justify-center border border-[#2678FD] rounded-lg p-4 flex flex-col gap-y-3">
-                <div className="flex flex-row items-center justify-between">
-                  <div className="flex flex-row gap-x-2 w-[80%]">
-                    <div className="w-8 h-8 bg-[#EDF4FF] rounded-full flex items-center justify-center">
-                      <File className="w-4 h-4 text-[#2678FD]" />
-                    </div>
-
-                    <div className="flex flex-col gap-y-1 w-[70%]">
-                      <p className="font-medium text-sm truncate">
-                        {android.apk.name}
-                      </p>
-                      <p className="text-sm text-[#475467]">
-                        {(android.apk.size / 1024 / 1024).toFixed(2)}
-                        MB
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setAndroid({ ...android, apk: undefined });
-                    }}
-                    className="ease-in-out transition-all active:scale-90"
-                  >
-                    <Trash className="h-4 w-4 text-[#667085]" />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <br />
-
-            <div className="flex flex-row gap-x-2 w-full">
-              <div className="flex flex-col gap-y-2 w-[50%]">
-                <Label>Architecture</Label>
-                <Select
-                  onValueChange={(v) => {
-                    setAndroid({ ...android, architecture: v as any });
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select architecture" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-col gap-y-2 w-[50%]">
-                <Label>Screen DPI</Label>
-                <Select
-                  onValueChange={(v) => {
-                    setAndroid({ ...android, screenDpi: v as any });
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select screen DPI" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-y-2">
-              <Label>
-                {`Minimum Version`}
-                <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                placeholder="10.0.0"
-                required
-                value={android.minVersion}
-                onChange={(e) =>
-                  setAndroid({ ...android, minVersion: e.target.value })
-                }
+          <AppBuildRow label="App Type" isRequired>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                onClick={(e) => {
+                  handleCheckboxChange("android");
+                }}
+                checked={appType["android"]}
+                id="android"
               />
+              <Label htmlFor="android">Android</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                onClick={(e) => {
+                  handleCheckboxChange("web");
+                }}
+                checked={appType["web"]}
+                id="web"
+              />
+              <Label htmlFor="web">Web</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                onClick={(e) => {
+                  handleCheckboxChange("ios");
+                }}
+                checked={appType["ios"]}
+                id="ios"
+              />
+              <Label htmlFor="ios">iOS</Label>
             </div>
           </AppBuildRow>
-        )}
 
-        {/* {isWeb && (
-            <AppBuildRow label="Web App">
-              <div className="flex flex-col gap-y-2">
-                <Label>
-                  URL
-                  <span className="text-red-500">*</span>
-                </Label>
-                <Input placeholder="https://bitpack.me" />
-              </div>
+          <hr />
 
-              <div className="flex flex-col gap-y-2">
-                <Label>Optimized for mobile?</Label>
-                <Switch />
-              </div>
-
-              <div className="flex flex-col gap-y-2">
-                <Label>
-                  Okay for meroku to make an installable of this web app?
-                </Label>
-                <Switch />
+          {isAndroid && (
+            <AppBuildRow label="Android">
+              {android.map((androidState, index) => (
+                <AppUploadContainer
+                  key={`android-${index}`}
+                  platformState={androidState}
+                  handlePlatformStateChange={handlePlatformStateChange}
+                  app="android"
+                />
+              ))}
+              <div
+                className="mt-4 underline cursor-pointer"
+                onClick={() => handleAddNewFile("android")}
+              >
+                Add new file
               </div>
             </AppBuildRow>
-          )} */}
+          )}
 
-        {isIOS && (
-          <AppBuildRow label="iOS">
-            <div className="flex items-center justify-center w-full">
-              <label
-                htmlFor="dropzone-file-ios"
-                className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600"
-              >
-                <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                  <svg
-                    aria-hidden="true"
-                    className="w-10 h-10 mb-3 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                    ></path>
-                  </svg>
-                  <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
-                    <span className="font-semibold">Click to upload</span> or
-                    drag and drop
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    IPA
-                  </p>
-                </div>
-                <input
-                  id="dropzone-file-ios"
-                  type="file"
-                  accept=".ipa"
-                  className="hidden"
-                  onChange={(e) => {
-                    if (!e.target.files || !e.target.files[0]) return;
-                    setIos({ ...ios, ipa: e.target.files[0] });
-                    e.target.value = "";
-                  }}
+          {isIOS && (
+            <AppBuildRow label="iOS">
+              {ios.map((iosState, index) => (
+                <AppUploadContainer
+                  key={`ios-${index}`}
+                  platformState={iosState}
+                  handlePlatformStateChange={handlePlatformStateChange}
+                  app="ios"
                 />
-              </label>
-            </div>
-            {ios.ipa && (
-              <div className="w-full h-full justify-center border border-[#2678FD] rounded-lg p-4 flex flex-col gap-y-3">
-                <div className="flex flex-row items-center justify-between">
-                  <div className="flex flex-row gap-x-2 w-[80%]">
-                    <div className="w-8 h-8 bg-[#EDF4FF] rounded-full flex items-center justify-center">
-                      <File className="w-4 h-4 text-[#2678FD]" />
-                    </div>
-
-                    <div className="flex flex-col gap-y-1 w-[70%]">
-                      <p className="font-medium text-sm truncate">
-                        {ios.ipa.name}
-                      </p>
-                      <p className="text-sm text-[#475467]">
-                        {(ios.ipa.size / 1024 / 1024).toFixed(2)}
-                        MB
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setIos({
-                        minVersion: undefined,
-                        architecture: undefined,
-                        screenDpi: undefined,
-                        ipa: undefined,
-                      });
-                    }}
-                    className="ease-in-out transition-all active:scale-90"
-                  >
-                    <Trash className="h-4 w-4 text-[#667085]" />
-                  </button>
-                </div>
+              ))}
+              <div
+                className="mt-4 underline cursor-pointer"
+                onClick={() => handleAddNewFile("ios")}
+              >
+                Add new file
               </div>
-            )}
+            </AppBuildRow>
+          )}
 
-            <br />
-
-            <div className="flex flex-row gap-x-2 w-full">
-              <div className="flex flex-col gap-y-2 w-[50%]">
-                <Label>Architecture</Label>
-                <Select
-                  onValueChange={(v) => {
-                    setIos({ ...ios, architecture: v as any });
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select architecture" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-col gap-y-2 w-[50%]">
-                <Label>Screen DPI</Label>
-                <Select
-                  onValueChange={(v) => {
-                    setIos({ ...ios, screenDpi: v as any });
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select screen DPI" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-y-2">
-              <Label>
-                {`Minimum Version`}
-                <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                placeholder="10.0.0"
-                required
-                value={ios.minVersion}
-                onChange={(e) => setIos({ ...ios, minVersion: e.target.value })}
+          {isWeb && (
+            <AppBuildRow label="Web App">
+              <WebContainer
+                webState={web}
+                handleWebState={handlePlatformStateChange}
               />
-            </div>
-          </AppBuildRow>
-        )}
+            </AppBuildRow>
+          )}
 
-        <div className="w-full flex flex-row justify-end gap-x-4">
-          <Button
-            onClick={uploadToIpfs}
-            disabled={
-              isSaving ||
-              Object.keys(appType).every(
-                (app) => !appType[app as keyof checkboxState]
-              )
-            }
-          >
-            Save
-          </Button>
-          <Button variant="outline" onClick={clearValues}>
-            Cancel
-          </Button>
+          <div className="w-full flex flex-row justify-end gap-x-4">
+            <Button
+              onClick={uploadToIpfs}
+              disabled={
+                isSaving ||
+                Object.keys(appType).every(
+                  (app) => !appType[app as keyof checkboxState]
+                )
+              }
+            >
+              Save
+            </Button>
+            <Button variant="outline" onClick={clearValues}>
+              Cancel
+            </Button>
+          </div>
         </div>
-      </div>
-      {/* <div className="flex flex-row justify-end gap-x-4">
-          <Button>Save</Button>
-          <Button variant={"outline"}>Cancel</Button>
-        </div>   */}
-      {/* </div> */}
+      )}
     </div>
   );
 }

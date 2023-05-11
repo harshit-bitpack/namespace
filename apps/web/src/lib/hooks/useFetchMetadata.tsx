@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useSDK, useStorage } from "@thirdweb-dev/react";
 import { useAccount } from "wagmi";
-
 import { env } from "@/env/schema.mjs";
+import appABI from "../../config/appABI.json";
+import devABI from "../../config/devABI.json";
+import BigNumber from "bignumber.js";
 
 export default function useFetchMetadata(name: string) {
   const { address } = useAccount();
@@ -17,6 +19,9 @@ export default function useFetchMetadata(name: string) {
     [key: string]: any;
   }>({});
 
+  const [expire, setExpire] = useState<BigNumber | null>(null);
+  const [tokenLife, setTokenLife] = useState<BigNumber | null>(null);
+
   useEffect(() => {
     const fetchData = async () => {
       if (!sdk || !address || !storage) return;
@@ -24,32 +29,44 @@ export default function useFetchMetadata(name: string) {
       try {
         if (ext === "app") {
           const appContract = await sdk.getContract(
-            env.NEXT_PUBLIC_APP_CONTRACT_ADDRESS
+            process.env.NEXT_PUBLIC_APP_CONTRACT_ADDRESS as string,
+            appABI
           );
 
-          const tokenId = await appContract.call("tokenIdForAppName", [name]);
-
+          const tokenId = await appContract.call("tokenIdForName", [name]);
           if (!tokenId) {
             throw new Error("Invalid app name");
           }
 
           const tokenUri = await appContract.call("tokenURI", [tokenId]);
+          const expire = await appContract.call("expireOn", [tokenId]);
+          const tokenLife = await appContract.call("token_life");
 
-          if (!tokenUri) return;
+          setTokenLife(tokenLife);
+          setExpire(expire);
+
+          if (!tokenUri) {
+            setLoading(false);
+            return;
+          }
 
           const stored = await storage.downloadJSON(tokenUri);
           setMetadata(stored ?? {});
         }
 
         const devContract = await sdk.getContract(
-          env.NEXT_PUBLIC_DEV_CONTRACT_ADDRESS
+          process.env.NEXT_PUBLIC_DEV_CONTRACT_ADDRESS as string,
+          devABI
         );
-        const tokenId = await devContract.call("tokenIdForDevName", [name]);
+        const tokenId = await devContract.call("tokenIdForName", [name]);
         if (!tokenId) {
           throw new Error("Invalid dev name");
         }
         const tokenUri = await devContract.call("tokenURI", [tokenId]);
-        if (!tokenUri) return;
+        if (!tokenUri) {
+          setLoading(false);
+          return;
+        }
 
         const stored = await storage.downloadJSON(tokenUri);
         setMetadata(stored ?? {});
@@ -66,6 +83,8 @@ export default function useFetchMetadata(name: string) {
 
   return {
     metadata,
+    tokenLife,
+    expire,
     isMetaLoading: loading,
     error,
   };
