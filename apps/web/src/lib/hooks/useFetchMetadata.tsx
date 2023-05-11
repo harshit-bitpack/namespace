@@ -4,6 +4,7 @@ import { useAccount } from "wagmi";
 import { env } from "@/env/schema.mjs";
 import appABI from "../../config/appABI.json";
 import devABI from "../../config/devABI.json";
+import BigNumber from "bignumber.js";
 
 export default function useFetchMetadata(name: string) {
   const { address } = useAccount();
@@ -17,6 +18,9 @@ export default function useFetchMetadata(name: string) {
   const [metadata, setMetadata] = useState<{
     [key: string]: any;
   }>({});
+
+  const [expire, setExpire] = useState<BigNumber | null>(null);
+  const [tokenLife, setTokenLife] = useState<BigNumber | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -35,6 +39,11 @@ export default function useFetchMetadata(name: string) {
           }
 
           const tokenUri = await appContract.call("tokenURI", [tokenId]);
+          const expire = await appContract.call("expireOn", [tokenId]);
+          const tokenLife = await appContract.call("token_life");
+
+          setTokenLife(tokenLife);
+          setExpire(expire);
 
           if (!tokenUri) {
             setLoading(false);
@@ -74,6 +83,8 @@ export default function useFetchMetadata(name: string) {
 
   return {
     metadata,
+    tokenLife,
+    expire,
     isMetaLoading: loading,
     error,
   };

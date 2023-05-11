@@ -11,7 +11,7 @@ import Spinner from "../Spinner";
 
 export default function Info({ name }: { name: string }) {
   const ext = name.split(".").pop();
-  const { metadata, isMetaLoading } = useFetchMetadata(name);
+  const { metadata, isMetaLoading, expire, tokenLife } = useFetchMetadata(name);
   return (
     <>
       {isMetaLoading && (
@@ -21,17 +21,33 @@ export default function Info({ name }: { name: string }) {
       )}
       {!isMetaLoading && (
         <div className="flex flex-col w-full gap-y-3 text-left">
-          <div className="flex flex-row items-center justify-between w-full px-4 py-3 rounded-lg bg-white">
+          <div className="flex flex-col xl:flex-row items-center justify-between w-full px-4 py-3 rounded-lg bg-white">
             <div className="flex flex-row gap-x-2 items-center justify-center">
               <CheckCircleIcon className="text-green-500" />
               <p>{name}</p>
             </div>
 
-            {/* Registered On */}
-            <div className=""></div>
-
-            {/* Expires On */}
-            <div className=""></div>
+            {expire && tokenLife ? (
+              <>
+                <div className="text-[#667085] font-medium text-[15px]">
+                  <span className="mr-1">Registered on</span>
+                  <span>
+                    {new Date(
+                      (expire.toNumber() - tokenLife.toNumber()) * 1000
+                    ).toDateString()}
+                  </span>
+                  <span></span>
+                </div>
+                <div className="text-[#667085] font-medium text-[15px]">
+                  <span className="mr-1">Expire on</span>
+                  <span>
+                    {new Date(expire.toNumber() * 1000).toDateString()}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <></>
+            )}
           </div>
 
           <div className="flex flex-col items-center justify-start w-full rounded-lg bg-white shadow-[0_20_20_60_#0000000D] overflow-hidden">
