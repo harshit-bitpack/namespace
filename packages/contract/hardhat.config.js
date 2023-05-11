@@ -1,5 +1,7 @@
 require("@nomicfoundation/hardhat-toolbox");
 require("@openzeppelin/hardhat-upgrades");
+require("@nomiclabs/hardhat-solhint");
+require("hardhat-gas-reporter");
 require("dotenv/config");
 
 const accounts = {
@@ -13,6 +15,16 @@ module.exports = {
     flat: true,
     // only: [],
     // except: []
+  },
+  gasReporter: {
+    enabled: true,
+    currency: "USD",
+    coinmarketcap: process.env.COINMARKETCAP_API_KEY,
+    excludeContracts: ["contracts/mocks/", "contracts/libraries/"],
+    url: "https://polygon-rpc.com/",
+    token: "MATIC",
+    gasPriceApi: "https://api.polygonscan.com/api?module=proxy&action=eth_gasPrice"
+    // gasPrice: 160
   },
   etherscan: {
     // Your API key for Etherscan
@@ -69,6 +81,14 @@ module.exports = {
       gasPrice: 20000000000,
       gasMultiplier: 2,
     },
+    polygon: {
+      url: `https://polygon-mainnet.chainstacklabs.com`,
+      accounts: [process.env.PRIVATE_KEY], //add private key in this
+      chainId: 137,
+      live: true,
+      saveDeployments: true,
+      tags: ["mainnet"],
+    }
   },
   solidity: {
     compilers: [
