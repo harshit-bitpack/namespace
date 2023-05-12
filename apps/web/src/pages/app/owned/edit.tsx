@@ -17,6 +17,7 @@ export default function EditInfo({
   alchemy_api_key_urls: {
     api_key_url_ethereum: string;
     api_key_url_polygon: string;
+    api_key_url_zkevm: string;
   };
 }) {
   const router = useRouter();
@@ -104,6 +105,7 @@ export async function getServerSideProps() {
       alchemy_api_key_urls: {
         api_key_url_ethereum: env.ALCHEMY_API_KEY_URL_ETHEREUM,
         api_key_url_polygon: env.ALCHEMY_API_KEY_URL_POLYGON,
+        api_key_url_zkevm: env.ALCHEMY_API_KEY_URL_ZKEVM,
       },
     },
   };

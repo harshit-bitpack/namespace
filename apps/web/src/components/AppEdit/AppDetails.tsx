@@ -65,6 +65,7 @@ export default function AppDetails({
   alchemy_api_key_urls: {
     api_key_url_ethereum: string;
     api_key_url_polygon: string;
+    api_key_url_zkevm: string;
   };
 }) {
   console.log("MetaData : ", metadata);
@@ -230,8 +231,13 @@ export default function AppDetails({
   let chainOptions = [
     { label: "Ethereum", value: 1 },
     { label: "Polygon", value: 137 },
+    { label: "zkEVM", value: 1101 },
   ];
 
+  // condition1 ? value1
+  //       : condition2 ? value2
+  //       : condition3 ? value3
+  //       : value4;
   // validate contract address
   async function validateAddress(
     address: string,
@@ -240,7 +246,9 @@ export default function AppDetails({
     const web3 = new Web3(
       chainId === 1
         ? alchemy_api_key_urls.api_key_url_ethereum
-        : alchemy_api_key_urls.api_key_url_polygon
+        : chainId === 137
+        ? alchemy_api_key_urls.api_key_url_polygon
+        : alchemy_api_key_urls.api_key_url_zkevm
     );
     if (address.length !== 42 || address.slice(0, 2) !== "0x") {
       return false;

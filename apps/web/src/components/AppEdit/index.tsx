@@ -13,6 +13,7 @@ export default function AppEdit({
   alchemy_api_key_urls: {
     api_key_url_ethereum: string;
     api_key_url_polygon: string;
+    api_key_url_zkevm: string;
   };
 }) {
   const { metadata, isMetaLoading } = useFetchMetadata(appName);
