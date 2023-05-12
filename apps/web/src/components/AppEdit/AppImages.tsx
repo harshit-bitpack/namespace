@@ -14,6 +14,7 @@ import { useSDK } from "@thirdweb-dev/react";
 import { toast } from "sonner";
 import { env } from "@/env/schema.mjs";
 import appABI from "../../config/appABI.json";
+import { AppDataValidator } from "@/lib/schemaValidator";
 
 const AppImagesRow = ({
   children,
@@ -213,6 +214,16 @@ export default function AppImages({
       }
       metaData["images"]["screenshots"] = screenshotsUrl;
       try {
+        const validator = new AppDataValidator();
+        const [valid, errors] = validator.validate(metaData);
+        console.log("Data Valid: ", valid);
+        if (!valid) {
+          toast.error("metadata not matching with the schema, check console");
+          console.error("metadata schema errors", JSON.parse(errors));
+          throw new Error(
+            "metadata not matching with the schema, check console"
+          );
+        }
         await savingMetaDataOnChain(metaData, sdk);
         resolve("done");
       } catch (e: any) {

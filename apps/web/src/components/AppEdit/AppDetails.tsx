@@ -181,8 +181,8 @@ export default function AppDetails({
       setLanguage(metadata.language);
     }
 
-    if (metadata.minimumAge) {
-      setMinimumAge(metadata.minimumAge);
+    if (metadata.minAge) {
+      setMinimumAge(metadata.minAge);
     }
 
     if (metadata.version) {
@@ -381,7 +381,7 @@ export default function AppDetails({
           throw new Error("Language is required");
         }
         metadata.language = language;
-        metadata.minimumAge = minimumAge;
+        metadata.minAge = minimumAge;
 
         if (!version && !metadata.version) {
           throw new Error("Version is required");

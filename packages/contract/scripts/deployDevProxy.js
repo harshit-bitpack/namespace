@@ -7,7 +7,7 @@ var file = require("./config.json");
 async function main() {
   const DevNFT = await ethers.getContractFactory("DevNFTUpgradeable");
   const devNFT = await upgrades.deployProxy(DevNFT, [
-    process.env.TRUSTED_FORWARDER_ADDRESS
+    process.env.TRUSTED_FORWARDER_ADDRESS,
   ]);
   await devNFT.deployed();
   console.log("DevNFT deployed to:", devNFT.address);

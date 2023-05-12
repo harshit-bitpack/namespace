@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@merokudao/dapp-store-registry": "^0.1.43",
     "@radix-ui/react-checkbox": "^1.0.3",
     "@radix-ui/react-dropdown-menu": "^2.0.4",
     "@radix-ui/react-label": "^2.0.1",
@@ -20,6 +21,8 @@
     "@rainbow-me/rainbowkit": "^0.12.1",
     "@thirdweb-dev/react": "^3.10.3",
     "@thirdweb-dev/sdk": "^3.10.3",
+    "ajv": "^8.12.0",
+    "ajv-formats": "^2.1.1",
     "bignumber.js": "^9.1.1",
     "class-variance-authority": "^0.4.0",
     "clsx": "^1.2.1",

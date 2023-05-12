@@ -6,7 +6,7 @@ const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 const { expect } = require("chai");
 const ADDRESS_ZERO = "0x0000000000000000000000000000000000000000";
 const blockedDappNames = require("../scripts/backend/appNames.json");
-require("dotenv")
+require("dotenv");
 describe(".app & .dev NFT minting", function () {
   // We define a fixture to reuse the same setup in every test.
   // We use loadFixture to run this setup once, snapshot that state,
@@ -37,7 +37,9 @@ describe(".app & .dev NFT minting", function () {
     await dappNameList.deployed();
     await dappNameList.setDappNames(specialdAppNames);
     const DevNFT = await ethers.getContractFactory("DevNFTUpgradeable");
-    const devNFT = await upgrades.deployProxy(DevNFT,[process.env.TRUSTED_FORWARDER_ADDRESS]);
+    const devNFT = await upgrades.deployProxy(DevNFT, [
+      process.env.TRUSTED_FORWARDER_ADDRESS,
+    ]);
     await devNFT.deployed();
     const appName = {
       owner: "ownerAppName",
@@ -57,7 +59,7 @@ describe(".app & .dev NFT minting", function () {
     const appNFT = await upgrades.deployProxy(AppNFT, [
       devNFT.address,
       dappNameList.address,
-      process.env.TRUSTED_FORWARDER_ADDRESS
+      process.env.TRUSTED_FORWARDER_ADDRESS,
     ]);
     await appNFT.deployed();
     // const devNFT = await DevNFT.deploy();
@@ -94,26 +96,14 @@ describe(".app & .dev NFT minting", function () {
   ) {
     const [owner, account1, account2, otherAccount] = await ethers.getSigners();
 
-    await devNFT.safeMintDevNFT(
-      owner.address,
-      devName.owner
-    );
+    await devNFT.safeMintDevNFT(owner.address, devName.owner);
     await devNFT
       .connect(account1)
-      .safeMintDevNFT(
-        account1.address,
-        devName.account1
-      );
-    await appNFT.safeMintAppNFT(
-      owner.address,
-      appName.owner
-    );
+      .safeMintDevNFT(account1.address, devName.account1);
+    await appNFT.safeMintAppNFT(owner.address, appName.owner);
     await appNFT
       .connect(account1)
-      .safeMintAppNFT(
-        account1.address,
-        appName.account1
-      );
+      .safeMintAppNFT(account1.address, appName.account1);
   }
 
   describe("Deployment", function () {
@@ -189,10 +179,7 @@ describe(".app & .dev NFT minting", function () {
         await expect(
           devNFT
             .connect(account1)
-            .safeMintDevNFT(
-              account1.address,
-              devName.account1
-            )
+            .safeMintDevNFT(account1.address, devName.account1)
         ).not.to.be.reverted;
       });
 
@@ -203,18 +190,12 @@ describe(".app & .dev NFT minting", function () {
         // Called first time
         devNFT
           .connect(account1)
-          .safeMintDevNFT(
-            account1.address,
-            devName.account1
-          );
+          .safeMintDevNFT(account1.address, devName.account1);
         // Caled second time
         await expect(
           devNFT
             .connect(account1)
-            .safeMintDevNFT(
-              account1.address,
-              devName.account1
-            )
+            .safeMintDevNFT(account1.address, devName.account1)
         ).to.be.revertedWith("provided wallet already used to create app");
       });
 
@@ -231,15 +212,20 @@ describe(".app & .dev NFT minting", function () {
           app_uri,
         } = await loadFixture(deployNFTsFixture);
 
-        await basicMintDone(devNFT, appNFT, dev_uri, app_uri, devName, appName, appNameLower);
+        await basicMintDone(
+          devNFT,
+          appNFT,
+          dev_uri,
+          app_uri,
+          devName,
+          appName,
+          appNameLower
+        );
         // We use lock.connect() to send a transaction from another account
         await expect(
           devNFT
             .connect(otherAccount)
-            .safeMintDevNFT(
-              otherAccount.address,
-              devName.owner
-            )
+            .safeMintDevNFT(otherAccount.address, devName.owner)
         ).to.be.revertedWith("ERC721NameStorage: this Name already in use");
       });
     });
@@ -262,9 +248,8 @@ describe(".app & .dev NFT minting", function () {
   describe("Mint .appNFT", function () {
     describe("Validations", function () {
       it("Should revert with the right error if called from non-owner account in safeMint", async function () {
-        const { appNFT, otherAccount, appName, appNameLower, app_uri } = await loadFixture(
-          deployNFTsFixture
-        );
+        const { appNFT, otherAccount, appName, appNameLower, app_uri } =
+          await loadFixture(deployNFTsFixture);
 
         // We use lock.connect() to send a transaction from another account
         await expect(
@@ -279,103 +264,97 @@ describe(".app & .dev NFT minting", function () {
       });
 
       it("Shouldn't fail safeMint call if the owner calls it", async function () {
-        const { appNFT, owner, appName, appNameLower, app_uri } = await loadFixture(
-          deployNFTsFixture
-        );
+        const { appNFT, owner, appName, appNameLower, app_uri } =
+          await loadFixture(deployNFTsFixture);
         await expect(
           appNFT.safeMint(owner.address, appName.owner + app_uri, appName.owner)
         ).not.to.be.reverted;
       });
 
       it("Shouldn't fail safeMintAppNFT call if any address calls for first time after minting .devNFT", async function () {
-        const { devNFT, appNFT, account1, devName, appName, appNameLower, app_uri } =
-          await loadFixture(deployNFTsFixture);
+        const {
+          devNFT,
+          appNFT,
+          account1,
+          devName,
+          appName,
+          appNameLower,
+          app_uri,
+        } = await loadFixture(deployNFTsFixture);
         await devNFT
           .connect(account1)
-          .safeMintDevNFT(
-            account1.address,
-            devName.account1
-          );
+          .safeMintDevNFT(account1.address, devName.account1);
         await expect(
           appNFT
             .connect(account1)
-            .safeMintAppNFT(
-              account1.address,
-              appName.account1
-            )
+            .safeMintAppNFT(account1.address, appName.account1)
         ).not.to.be.reverted;
       });
 
       it("Should not revert with the right error if safeMintAppNFT called by user without minting .devNFT", async function () {
-        const { appNFT, account1, appName, appNameLower, app_uri } = await loadFixture(
-          deployNFTsFixture
-        );
+        const { appNFT, account1, appName, appNameLower, app_uri } =
+          await loadFixture(deployNFTsFixture);
 
         await expect(
           appNFT
             .connect(account1)
-            .safeMintAppNFT(
-              account1.address,
-              appName.account1
-            )
+            .safeMintAppNFT(account1.address, appName.account1)
         ).not.to.be.reverted;
       });
 
       it("Should revert with the right error if more than 1 appName is minted by same user", async function () {
-        const { devNFT, appNFT, account1, devName, appName, appNameLower, dev_uri, app_uri } =
-          await loadFixture(deployNFTsFixture);
+        const {
+          devNFT,
+          appNFT,
+          account1,
+          devName,
+          appName,
+          appNameLower,
+          dev_uri,
+          app_uri,
+        } = await loadFixture(deployNFTsFixture);
 
         await devNFT
           .connect(account1)
-          .safeMintDevNFT(
-            account1.address,
-            devName.account1
-          );
+          .safeMintDevNFT(account1.address, devName.account1);
         await expect(
           appNFT
             .connect(account1)
-            .safeMintAppNFT(
-              account1.address,
-              appName.account1
-            )
+            .safeMintAppNFT(account1.address, appName.account1)
         );
         await expect(
           appNFT
             .connect(account1)
-            .safeMintAppNFT(
-              account1.address,
-              appName.account1
-            )
+            .safeMintAppNFT(account1.address, appName.account1)
         ).to.be.revertedWith("provided wallet already used to create app");
       });
 
       it("Shouldn't fail safeMintAppNFT call if more than 1 appName is minted by same user when mintManyFlag is turned true by owner", async function () {
-        const { devNFT, appNFT, account1, devName, appName, appNameLower, dev_uri, app_uri } =
-          await loadFixture(deployNFTsFixture);
+        const {
+          devNFT,
+          appNFT,
+          account1,
+          devName,
+          appName,
+          appNameLower,
+          dev_uri,
+          app_uri,
+        } = await loadFixture(deployNFTsFixture);
 
         await appNFT.setMintManyFlag(true);
         await devNFT
           .connect(account1)
-          .safeMintDevNFT(
-            account1.address,
-            devName.account1
-          );
+          .safeMintDevNFT(account1.address, devName.account1);
         await expect(
           appNFT
             .connect(account1)
-            .safeMintAppNFT(
-              account1.address,
-              appName.account1
-            )
+            .safeMintAppNFT(account1.address, appName.account1)
         );
 
         await expect(
           appNFT
             .connect(account1)
-            .safeMintAppNFT(
-              account1.address,
-              "secondName"
-            )
+            .safeMintAppNFT(account1.address, "secondName")
         ).not.to.be.reverted;
         expect(await appNFT.tokensName(1)).to.equal(
           `${appNameLower.account1}.app`
@@ -398,21 +377,23 @@ describe(".app & .dev NFT minting", function () {
           app_uri,
         } = await loadFixture(deployNFTsFixture);
 
-        await basicMintDone(devNFT, appNFT, dev_uri, app_uri, devName, appName, appNameLower);
+        await basicMintDone(
+          devNFT,
+          appNFT,
+          dev_uri,
+          app_uri,
+          devName,
+          appName,
+          appNameLower
+        );
         devNFT
           .connect(otherAccount)
-          .safeMintDevNFT(
-            otherAccount.address,
-            devName.otherAccount
-          );
+          .safeMintDevNFT(otherAccount.address, devName.otherAccount);
         // We use lock.connect() to send a transaction from another account
         await expect(
           appNFT
             .connect(otherAccount)
-            .safeMintAppNFT(
-              otherAccount.address,
-              appName.owner
-            )
+            .safeMintAppNFT(otherAccount.address, appName.owner)
         ).to.be.revertedWith("ERC721NameStorage: this Name already in use");
       });
 
@@ -429,21 +410,23 @@ describe(".app & .dev NFT minting", function () {
           app_uri,
         } = await loadFixture(deployNFTsFixture);
 
-        await basicMintDone(devNFT, appNFT, dev_uri, app_uri, devName, appName, appNameLower);
+        await basicMintDone(
+          devNFT,
+          appNFT,
+          dev_uri,
+          app_uri,
+          devName,
+          appName,
+          appNameLower
+        );
         await devNFT
           .connect(otherAccount)
-          .safeMintDevNFT(
-            otherAccount.address,
-            devName.otherAccount
-          );
+          .safeMintDevNFT(otherAccount.address, devName.otherAccount);
 
         await expect(
           appNFT
             .connect(otherAccount)
-            .safeMintAppNFT(
-              otherAccount.address,
-              "XX"
-            )
+            .safeMintAppNFT(otherAccount.address, "XX")
         ).to.be.revertedWith("Minting of such names is restricted currently");
       });
 
@@ -460,22 +443,24 @@ describe(".app & .dev NFT minting", function () {
           app_uri,
         } = await loadFixture(deployNFTsFixture);
 
-        await basicMintDone(devNFT, appNFT, dev_uri, app_uri, devName, appName, appNameLower);
+        await basicMintDone(
+          devNFT,
+          appNFT,
+          dev_uri,
+          app_uri,
+          devName,
+          appName,
+          appNameLower
+        );
         await devNFT
           .connect(otherAccount)
-          .safeMintDevNFT(
-            otherAccount.address,
-            devName.otherAccount
-          );
+          .safeMintDevNFT(otherAccount.address, devName.otherAccount);
 
         await appNFT.setMintSpecialFlag(true);
         await expect(
           appNFT
             .connect(otherAccount)
-            .safeMintAppNFT(
-              otherAccount.address,
-              "XX"
-            )
+            .safeMintAppNFT(otherAccount.address, "XX")
         ).not.to.be.reverted;
         expect(await appNFT.tokensName(3)).to.equal("xx.app");
       });
@@ -497,18 +482,12 @@ describe(".app & .dev NFT minting", function () {
 
         await devNFT
           .connect(otherAccount)
-          .safeMintDevNFT(
-            otherAccount.address,
-            devName.otherAccount
-          );
+          .safeMintDevNFT(otherAccount.address, devName.otherAccount);
 
         await expect(
           appNFT
             .connect(otherAccount)
-            .safeMintAppNFT(
-              otherAccount.address,
-              specialdAppNames[1]
-            )
+            .safeMintAppNFT(otherAccount.address, specialdAppNames[1])
         ).to.be.revertedWith("App name reserved");
       });
 
@@ -526,26 +505,26 @@ describe(".app & .dev NFT minting", function () {
           specialdAppNames,
         } = await loadFixture(deployNFTsFixture);
 
-        await basicMintDone(devNFT, appNFT, dev_uri, app_uri, devName, appName, appNameLower);
+        await basicMintDone(
+          devNFT,
+          appNFT,
+          dev_uri,
+          app_uri,
+          devName,
+          appName,
+          appNameLower
+        );
         await devNFT
           .connect(otherAccount)
-          .safeMintDevNFT(
-            otherAccount.address,
-            devName.otherAccount
-          );
+          .safeMintDevNFT(otherAccount.address, devName.otherAccount);
 
         await appNFT.setCheckDappNamesListFlag(false);
         await expect(
           appNFT
             .connect(otherAccount)
-            .safeMintAppNFT(
-              otherAccount.address,
-              specialdAppNames[1]
-            )
+            .safeMintAppNFT(otherAccount.address, specialdAppNames[1])
         ).not.to.be.reverted;
-        expect(await appNFT.tokensName(3)).to.equal(
-          `${specialdAppNames[1]}`
-        );
+        expect(await appNFT.tokensName(3)).to.equal(`${specialdAppNames[1]}`);
       });
 
       it("Should revert if appname has subdomain", async function () {
@@ -562,16 +541,21 @@ describe(".app & .dev NFT minting", function () {
           specialdAppNames,
         } = await loadFixture(deployNFTsFixture);
 
-        await basicMintDone(devNFT, appNFT, dev_uri, app_uri, devName, appName, appNameLower);
+        await basicMintDone(
+          devNFT,
+          appNFT,
+          dev_uri,
+          app_uri,
+          devName,
+          appName,
+          appNameLower
+        );
 
-          await expect(
-            appNFT
-              .connect(otherAccount)
-              .safeMintAppNFT(
-                otherAccount.address,
-                "mint.domain"
-              )
-          ).to.be.revertedWith("Error: Subdomain or space found");
+        await expect(
+          appNFT
+            .connect(otherAccount)
+            .safeMintAppNFT(otherAccount.address, "mint.domain")
+        ).to.be.revertedWith("Error: Subdomain or space found");
       });
 
       it("Should convert uppercase appNames to lower case when minted with or without `.app`", async function () {
@@ -588,33 +572,33 @@ describe(".app & .dev NFT minting", function () {
           specialdAppNames,
         } = await loadFixture(deployNFTsFixture);
 
-        await basicMintDone(devNFT, appNFT, dev_uri, app_uri, devName, appName, appNameLower);
-          await appNFT.setMintManyFlag(true);
-          await expect(
-            appNFT
-              .connect(otherAccount)
-              .safeMintAppNFT(
-                otherAccount.address,
-                "MyFirstAppName"
-              )
-          ).not.to.be.reverted;
+        await basicMintDone(
+          devNFT,
+          appNFT,
+          dev_uri,
+          app_uri,
+          devName,
+          appName,
+          appNameLower
+        );
+        await appNFT.setMintManyFlag(true);
+        await expect(
+          appNFT
+            .connect(otherAccount)
+            .safeMintAppNFT(otherAccount.address, "MyFirstAppName")
+        ).not.to.be.reverted;
 
-          await expect(
-            appNFT
-              .connect(otherAccount)
-              .safeMintAppNFT(
-                otherAccount.address,
-                "MySecondAppName.app"
-              )
-          ).not.to.be.reverted;
+        await expect(
+          appNFT
+            .connect(otherAccount)
+            .safeMintAppNFT(otherAccount.address, "MySecondAppName.app")
+        ).not.to.be.reverted;
 
-          await expect(await appNFT.tokensName(3)).to.equal(
-            `myfirstappname.app`
-          );
+        await expect(await appNFT.tokensName(3)).to.equal(`myfirstappname.app`);
 
-          await expect(await appNFT.tokensName(4)).to.equal(
-            `mysecondappname.app`
-          );
+        await expect(await appNFT.tokensName(4)).to.equal(
+          `mysecondappname.app`
+        );
       });
 
       it("Should revert if appname has space", async function () {
@@ -631,24 +615,28 @@ describe(".app & .dev NFT minting", function () {
           specialdAppNames,
         } = await loadFixture(deployNFTsFixture);
 
-        await basicMintDone(devNFT, appNFT, dev_uri, app_uri, devName, appName, appNameLower);
+        await basicMintDone(
+          devNFT,
+          appNFT,
+          dev_uri,
+          app_uri,
+          devName,
+          appName,
+          appNameLower
+        );
 
-          await expect(
-            appNFT
-              .connect(otherAccount)
-              .safeMintAppNFT(
-                otherAccount.address,
-                "mint my domain"
-              )
-          ).to.be.revertedWith("Error: Subdomain or space found");
+        await expect(
+          appNFT
+            .connect(otherAccount)
+            .safeMintAppNFT(otherAccount.address, "mint my domain")
+        ).to.be.revertedWith("Error: Subdomain or space found");
       });
     });
 
     describe("Events", function () {
       it("Should emit an event on safeMint", async function () {
-        const { appNFT, owner, appName, appNameLower, app_uri } = await loadFixture(
-          deployNFTsFixture
-        );
+        const { appNFT, owner, appName, appNameLower, app_uri } =
+          await loadFixture(deployNFTsFixture);
 
         await expect(
           appNFT.safeMint(owner.address, appName.owner + app_uri, appName.owner)
@@ -673,7 +661,15 @@ describe(".app & .dev NFT minting", function () {
           app_uri,
         } = await loadFixture(deployNFTsFixture);
 
-        await basicMintDone(devNFT, appNFT, dev_uri, app_uri, devName, appName, appNameLower);
+        await basicMintDone(
+          devNFT,
+          appNFT,
+          dev_uri,
+          app_uri,
+          devName,
+          appName,
+          appNameLower
+        );
 
         await expect(
           appNFT.connect(otherAccount).buyAppNFT(2)
@@ -693,7 +689,15 @@ describe(".app & .dev NFT minting", function () {
           app_uri,
         } = await loadFixture(deployNFTsFixture);
 
-        await basicMintDone(devNFT, appNFT, dev_uri, app_uri, devName, appName, appNameLower);
+        await basicMintDone(
+          devNFT,
+          appNFT,
+          dev_uri,
+          app_uri,
+          devName,
+          appName,
+          appNameLower
+        );
         const tokenID = await appNFT.tokenIdForName(
           `${appNameLower.account1}.app`
         );
@@ -720,7 +724,15 @@ describe(".app & .dev NFT minting", function () {
           app_uri,
         } = await loadFixture(deployNFTsFixture);
 
-        await basicMintDone(devNFT, appNFT, dev_uri, app_uri, devName, appName, appNameLower);
+        await basicMintDone(
+          devNFT,
+          appNFT,
+          dev_uri,
+          app_uri,
+          devName,
+          appName,
+          appNameLower
+        );
         const tokenID = await appNFT.tokenIdForName(
           `${appNameLower.account1}.app`
         );
@@ -747,7 +759,15 @@ describe(".app & .dev NFT minting", function () {
           app_uri,
         } = await loadFixture(deployNFTsFixture);
 
-        await basicMintDone(devNFT, appNFT, dev_uri, app_uri, devName, appName, appNameLower);
+        await basicMintDone(
+          devNFT,
+          appNFT,
+          dev_uri,
+          app_uri,
+          devName,
+          appName,
+          appNameLower
+        );
         const tokenID = await appNFT.tokenIdForName(
           `${appNameLower.account1}.app`
         );
@@ -784,7 +804,15 @@ describe(".app & .dev NFT minting", function () {
           app_uri,
         } = await loadFixture(deployNFTsFixture);
 
-        await basicMintDone(devNFT, appNFT, dev_uri, app_uri, devName, appName, appNameLower);
+        await basicMintDone(
+          devNFT,
+          appNFT,
+          dev_uri,
+          app_uri,
+          devName,
+          appName,
+          appNameLower
+        );
         const tokenID = await appNFT.tokenIdForName(
           `${appNameLower.account1}.app`
         );
@@ -792,9 +820,7 @@ describe(".app & .dev NFT minting", function () {
         const renew_fees = await appNFT.renew_fees();
 
         await expect(
-          appNFT
-            .connect(account1)
-            .renewToken(tokenID, { value: renew_fees })
+          appNFT.connect(account1).renewToken(tokenID, { value: renew_fees })
         ).to.be.revertedWith("Token is not expired yet");
       });
 
@@ -811,7 +837,15 @@ describe(".app & .dev NFT minting", function () {
           app_uri,
         } = await loadFixture(deployNFTsFixture);
 
-        await basicMintDone(devNFT, appNFT, dev_uri, app_uri, devName, appName, appNameLower);
+        await basicMintDone(
+          devNFT,
+          appNFT,
+          dev_uri,
+          app_uri,
+          devName,
+          appName,
+          appNameLower
+        );
         const tokenID = await appNFT.tokenIdForName(
           `${appNameLower.account1}.app`
         );
@@ -841,7 +875,15 @@ describe(".app & .dev NFT minting", function () {
           app_uri,
         } = await loadFixture(deployNFTsFixture);
 
-        await basicMintDone(devNFT, appNFT, dev_uri, app_uri, devName, appName, appNameLower);
+        await basicMintDone(
+          devNFT,
+          appNFT,
+          dev_uri,
+          app_uri,
+          devName,
+          appName,
+          appNameLower
+        );
         const tokenID = await appNFT.tokenIdForName(
           `${appNameLower.account1}.app`
         );
@@ -867,7 +909,15 @@ describe(".app & .dev NFT minting", function () {
           app_uri,
         } = await loadFixture(deployNFTsFixture);
 
-        await basicMintDone(devNFT, appNFT, dev_uri, app_uri, devName, appName, appNameLower);
+        await basicMintDone(
+          devNFT,
+          appNFT,
+          dev_uri,
+          app_uri,
+          devName,
+          appName,
+          appNameLower
+        );
         const tokenID = await appNFT.tokenIdForName(
           `${appNameLower.account1}.app`
         );
@@ -878,15 +928,11 @@ describe(".app & .dev NFT minting", function () {
         const renew_fees = await appNFT.renew_fees();
 
         await expect(
-          appNFT
-            .connect(account1)
-            .renewToken(tokenID, { value: renew_fees })
+          appNFT.connect(account1).renewToken(tokenID, { value: renew_fees })
         ).not.to.be.reverted;
 
-        await expect(
-          appNFT.connect(account1).updateTokenURI(tokenID, "newURI")
-        ).not.to.be.reverted;
-
+        await expect(appNFT.connect(account1).updateTokenURI(tokenID, "newURI"))
+          .not.to.be.reverted;
       });
 
       it("Should revert with the right error if non owner try claim token within renew life(grace period)", async function () {
@@ -902,7 +948,15 @@ describe(".app & .dev NFT minting", function () {
           app_uri,
         } = await loadFixture(deployNFTsFixture);
 
-        await basicMintDone(devNFT, appNFT, dev_uri, app_uri, devName, appName, appNameLower);
+        await basicMintDone(
+          devNFT,
+          appNFT,
+          dev_uri,
+          app_uri,
+          devName,
+          appName,
+          appNameLower
+        );
         const tokenID = await appNFT.tokenIdForName(
           `${appNameLower.account1}.app`
         );
@@ -913,9 +967,10 @@ describe(".app & .dev NFT minting", function () {
         const renew_fees = await appNFT.renew_fees();
 
         await expect(
-          appNFT.connect(otherAccount).claimToken(tokenID, {value: renew_fees})
+          appNFT
+            .connect(otherAccount)
+            .claimToken(tokenID, { value: renew_fees })
         ).to.be.revertedWith("Token not available for claiming yet");
-
       });
 
       it("Should revert with the right error if non owner renew with less renew fees", async function () {
@@ -931,7 +986,15 @@ describe(".app & .dev NFT minting", function () {
           app_uri,
         } = await loadFixture(deployNFTsFixture);
 
-        await basicMintDone(devNFT, appNFT, dev_uri, app_uri, devName, appName, appNameLower);
+        await basicMintDone(
+          devNFT,
+          appNFT,
+          dev_uri,
+          app_uri,
+          devName,
+          appName,
+          appNameLower
+        );
         const tokenID = await appNFT.tokenIdForName(
           `${appNameLower.account1}.app`
         );
@@ -943,7 +1006,9 @@ describe(".app & .dev NFT minting", function () {
         const renew_fees = await appNFT.renew_fees();
 
         await expect(
-          appNFT.connect(otherAccount).claimToken(tokenID, {value: (Number(renew_fees)/2).toString()})
+          appNFT
+            .connect(otherAccount)
+            .claimToken(tokenID, { value: (Number(renew_fees) / 2).toString() })
         ).to.be.revertedWith("Insufficient renew fees");
       });
 
@@ -960,7 +1025,15 @@ describe(".app & .dev NFT minting", function () {
           app_uri,
         } = await loadFixture(deployNFTsFixture);
 
-        await basicMintDone(devNFT, appNFT, dev_uri, app_uri, devName, appName, appNameLower);
+        await basicMintDone(
+          devNFT,
+          appNFT,
+          dev_uri,
+          app_uri,
+          devName,
+          appName,
+          appNameLower
+        );
         const tokenID = await appNFT.tokenIdForName(
           `${appNameLower.account1}.app`
         );
@@ -972,7 +1045,9 @@ describe(".app & .dev NFT minting", function () {
         const renew_fees = await appNFT.renew_fees();
 
         await expect(
-          appNFT.connect(otherAccount).claimToken(tokenID, {value: renew_fees})
+          appNFT
+            .connect(otherAccount)
+            .claimToken(tokenID, { value: renew_fees })
         ).not.to.be.reverted;
 
         expect(await appNFT.ownerOf(tokenID)).to.equal(otherAccount.address);

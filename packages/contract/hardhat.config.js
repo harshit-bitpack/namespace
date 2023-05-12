@@ -23,7 +23,8 @@ module.exports = {
     excludeContracts: ["contracts/mocks/", "contracts/libraries/"],
     url: "https://polygon-rpc.com/",
     token: "MATIC",
-    gasPriceApi: "https://api.polygonscan.com/api?module=proxy&action=eth_gasPrice"
+    gasPriceApi:
+      "https://api.polygonscan.com/api?module=proxy&action=eth_gasPrice",
     // gasPrice: 160
   },
   etherscan: {
@@ -88,7 +89,7 @@ module.exports = {
       live: true,
       saveDeployments: true,
       tags: ["mainnet"],
-    }
+    },
   },
   solidity: {
     compilers: [
