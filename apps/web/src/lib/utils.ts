@@ -105,3 +105,9 @@ export const subCategories: { [key: string]: any } = {
   sports: ["sports-news", "team-management", "live-scores"],
   personalization: ["themes", "wallpapers", "customization-tools"],
 };
+
+export interface screenShot {
+  file?: File;
+  id: string;
+  url?: string;
+}

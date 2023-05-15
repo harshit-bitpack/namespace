@@ -29,14 +29,14 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
-!apps/web/.env
+apps/web/.env
 
 # turbo
 .turbo
 
 # contracts
 packages/contract/node_modules
-!packages/contract/.env
+packages/contract/.env
 packages/contract/coverage
 
 # contract

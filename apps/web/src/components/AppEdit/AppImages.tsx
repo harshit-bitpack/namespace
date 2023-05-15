@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
 import { Button } from "ui";
 import {
   UseFormResetField,
@@ -15,6 +15,8 @@ import { toast } from "sonner";
 import { env } from "@/env/schema.mjs";
 import appABI from "../../config/appABI.json";
 import { AppDataValidator } from "@/lib/schemaValidator";
+import { v4 as uuidv4 } from "uuid";
+import { screenShot } from "@/lib/utils";
 
 const AppImagesRow = ({
   children,
@@ -121,6 +123,9 @@ export default function AppImages({
   watch,
   appName,
   setValue,
+  screenShots,
+  setScreenShots,
+  biconomy_api_id_updateUri,
 }: {
   metaData: any;
   isMetaLoading: any;
@@ -130,11 +135,15 @@ export default function AppImages({
   watch: UseFormWatch<FieldValues>;
   appName: string;
   setValue: UseFormSetValue<FieldValues>;
+  screenShots: screenShot[];
+  setScreenShots: Dispatch<SetStateAction<screenShot[]>>;
+  biconomy_api_id_updateUri: string;
 }) {
   console.log("MetaData : ", metaData);
   const [isSaving, setIsSaving] = useState(false);
   const { mutateAsync: upload } = useStorageUpload();
   const sdk = useSDK();
+  const screenShotInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!metaData.images) {
@@ -150,14 +159,19 @@ export default function AppImages({
     }
 
     if (metaData.images.screenshots) {
-      for (let i = 0; i < metaData.images.screenshots.length; i++) {
-        setValue(
-          `dropzone-file-screenshot${i + 1}`,
-          metaData.images.screenshots[i]
+      // clear the previous screenShots state before adding new screenshot.
+      setScreenShots([]);
+      metaData.images.screenshots.forEach((screenshotUrl: string) => {
+        const newScreenshot = {
+          id: uuidv4(),
+          url: screenshotUrl,
+        };
+        setScreenShots((prevScreenshots: any) =>
+          prevScreenshots.concat(newScreenshot)
         );
-      }
+      });
     }
-  }, [metaData, setValue]);
+  }, [metaData, setScreenShots, setValue]);
 
   const onSave = async () => {
     const updatingMetaData = async (
@@ -176,17 +190,6 @@ export default function AppImages({
           ? getValues("dropzone-file-banner")[0]
           : getValues("dropzone-file-banner")
         : undefined;
-      let screenshots = [];
-      for (let i = 1; i <= 5; i++) {
-        const screenshot = getValues(`dropzone-file-screenshot${i}`)
-          ? typeof getValues(`dropzone-file-screenshot${i}`) === "object"
-            ? getValues(`dropzone-file-screenshot${i}`)[0]
-            : getValues(`dropzone-file-screenshot${i}`)
-          : undefined;
-        if (screenshot) {
-          screenshots.push(screenshot);
-        }
-      }
       if (!metaData.images) {
         metaData["images"] = {};
       }
@@ -202,16 +205,13 @@ export default function AppImages({
       } else {
         metaData["images"]["banner"] = undefined;
       }
-      let screenshotsUrl: string[] = [];
-      for (const screenshot of screenshots) {
-        let url: string;
-        if (typeof screenshot === "object") {
-          url = await uploadFile(screenshot);
-        } else {
-          url = screenshot;
+      const uploadPromises = screenShots.map(async (screenshot) => {
+        if (screenshot.file) {
+          return await uploadFile(screenshot.file);
         }
-        screenshotsUrl.push(url);
-      }
+        return screenshot.url as string;
+      });
+      const screenshotsUrl = await Promise.all(uploadPromises);
       metaData["images"]["screenshots"] = screenshotsUrl;
       try {
         const validator = new AppDataValidator();
@@ -265,6 +265,33 @@ export default function AppImages({
     await appContract.call("updateTokenURI", [tokenId, uri]);
   };
 
+  const handleScreenshotUpload = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const files = event.target.files;
+    if (!files) {
+      return;
+    }
+    // more than 5 screenshot
+    if (screenShots.length + files.length > 5) {
+      toast.error("More than 5 screenshots are not allowed");
+      return;
+    }
+
+    const newScreenshots = [];
+    for (let i = 0; i < files.length; i++) {
+      const newScreenshot = {
+        file: files[i],
+        id: uuidv4(),
+      };
+      newScreenshots.push(newScreenshot);
+    }
+    setScreenShots([...screenShots, ...newScreenshots]);
+    if (screenShotInputRef.current) {
+      screenShotInputRef.current.value = "";
+    }
+  };
+
   return (
     <div className="flex flex-col items-center justify-start w-full rounded-lg bg-white shadow-[0_20_20_60_#0000000D] overflow-hidden">
       <div className="p-4 md:p-8 w-full gap-y-6 flex flex-col">
@@ -295,42 +322,72 @@ export default function AppImages({
         </AppImagesRow>
 
         <AppImagesRow label="Upload upto 5 screenshots">
-          <UploadImage
-            id="dropzone-file-screenshot1"
-            resetField={resetField}
-            register={register}
-            getValues={getValues}
-            watch={watch}
-          />
-          <UploadImage
-            id="dropzone-file-screenshot2"
-            resetField={resetField}
-            register={register}
-            getValues={getValues}
-            watch={watch}
-          />
-          <UploadImage
-            id="dropzone-file-screenshot3"
-            resetField={resetField}
-            register={register}
-            getValues={getValues}
-            watch={watch}
-          />
-          <UploadImage
-            id="dropzone-file-screenshot4"
-            resetField={resetField}
-            register={register}
-            getValues={getValues}
-            watch={watch}
-          />
-          <UploadImage
-            id="dropzone-file-screenshot5"
-            resetField={resetField}
-            register={register}
-            getValues={getValues}
-            watch={watch}
-          />
+          <label className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600">
+            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+              <svg
+                aria-hidden="true"
+                className="w-10 h-10 mb-3 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                ></path>
+              </svg>
+              <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
+                <span className="font-semibold">Click to upload</span> or drag
+                and drop
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                PNG, JPG, (MAX. 5mb)
+              </p>
+            </div>
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              ref={screenShotInputRef}
+              multiple
+              onChange={(e) => {
+                handleScreenshotUpload(e);
+                // e.target.files = null;
+              }}
+            />
+          </label>
         </AppImagesRow>
+        {screenShots.length > 0 ? (
+          <div className="flex flex-row flex-wrap gap-x-2 gap-y-2 pl-48">
+            {screenShots.map((screenShot, index) => (
+              <>
+                <Image
+                  key={screenShot.id}
+                  src={
+                    screenShot.url ??
+                    (screenShot.file
+                      ? URL.createObjectURL(screenShot.file)
+                      : "")
+                  }
+                  alt="App Screenshot"
+                  width={120}
+                  height={120}
+                  className="rounded-lg hover:opacity-30 ease-in-out transition-all active:scale-90 cursor-pointer"
+                  onClick={() => {
+                    setScreenShots(
+                      screenShots.filter((x) => x.id != screenShot.id)
+                    );
+                  }}
+                />
+              </>
+            ))}
+          </div>
+        ) : (
+          <></>
+        )}
 
         <div className="w-full flex flex-row justify-end gap-x-4">
           <Button variant="outline">Cancel</Button>

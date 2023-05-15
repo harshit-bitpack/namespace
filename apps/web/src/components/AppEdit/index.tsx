@@ -4,10 +4,13 @@ import AppBuild from "./AppBuild";
 import AppImages from "./AppImages";
 import useFetchMetadata from "@/lib/hooks/useFetchMetadata";
 import { useForm } from "react-hook-form";
+import { useState } from "react";
+import { screenShot } from "@/lib/utils";
 
 export default function AppEdit({
   appName,
   alchemy_api_key_urls,
+  biconomy_api_id_updateUri,
 }: {
   appName: string;
   alchemy_api_key_urls: {
@@ -15,10 +18,12 @@ export default function AppEdit({
     api_key_url_polygon: string;
     api_key_url_zkevm: string;
   };
+  biconomy_api_id_updateUri: string;
 }) {
   const { metadata, isMetaLoading } = useFetchMetadata(appName);
   const { register, handleSubmit, getValues, resetField, watch, setValue } =
     useForm();
+  const [screenShots, setScreenShots] = useState<screenShot[]>([]);
   return (
     <>
       {/* {isMetaLoading && (
@@ -58,6 +63,9 @@ export default function AppEdit({
             resetField={resetField}
             watch={watch}
             setValue={setValue}
+            screenShots={screenShots}
+            setScreenShots={setScreenShots}
+            biconomy_api_id_updateUri={biconomy_api_id_updateUri}
           />
         </TabsContent>
       </Tabs>

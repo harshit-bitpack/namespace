@@ -11,6 +11,8 @@ const server = z.object({
     ALCHEMY_API_KEY_URL_ETHEREUM: z.string(),
     ALCHEMY_API_KEY_URL_POLYGON: z.string(),
     ALCHEMY_API_KEY_URL_ZKEVM: z.string(),
+    BICONOMY_API_ID_SAFE_MINT: z.string(),
+    BICONOMY_API_ID_UPDATE_URI: z.string()
 });
 
 /**
@@ -39,8 +41,9 @@ const processEnv = {
     BICONOMY_API_KEY: process.env.BICONOMY_API_KEY,
     ALCHEMY_API_KEY_URL_ETHEREUM: process.env.ALCHEMY_API_KEY_URL_ETHEREUM,
     ALCHEMY_API_KEY_URL_POLYGON: process.env.ALCHEMY_API_KEY_URL_POLYGON,
-    ALCHEMY_API_KEY_URL_ZKEVM: process.env.ALCHEMY_API_KEY_URL_ZKEVM
-
+    ALCHEMY_API_KEY_URL_ZKEVM: process.env.ALCHEMY_API_KEY_URL_ZKEVM,
+    BICONOMY_API_ID_SAFE_MINT: process.env.BICONOMY_API_ID_SAFE_MINT,
+    BICONOMY_API_ID_UPDATE_URI: process.env.BICONOMY_API_ID_UPDATE_URI
 };
 
 // Don't touch the part below

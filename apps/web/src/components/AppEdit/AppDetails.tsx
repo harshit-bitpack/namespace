@@ -78,7 +78,7 @@ export default function AppDetails({
   const [appUrl, setAppUrl] = useState<string>();
   const [repoUrl, setRepoUrl] = useState<string>();
   const [dappId, setDappId] = useState(appName);
-  const [chainIdArr, setChainIdArr] = useState<number[]>([]);
+  const [chainIdArr, setChainIdArr] = useState<string[]>([]);
   const [category, setCategory] = useState<string>();
   const [subCategory, setSubCategory] = useState<string>();
   const [contractCounter, setContractCounter] = useState(1);
@@ -124,11 +124,13 @@ export default function AppDetails({
 
   useEffect(() => {
     //for chains and contracts fields
-    if (metadata.chains && metadata.contractAddress) {
-      const tempChainIdArr = metadata.chains;
+    if (metadata.chains && metadata.contracts) {
+      const tempChainIdArr = metadata.chains.map((num: number) =>
+        num.toString()
+      );
       const tempContractArr = tempChainIdArr.map((x: number, idx: number) => {
-        const matchingContract = metadata.contractAddress.find(
-          (ele: any) => ele.chain === x
+        const matchingContract = metadata.contracts.find(
+          (ele: any) => ele.chainId === x
         );
         if (!matchingContract) {
           return;
@@ -229,24 +231,19 @@ export default function AppDetails({
   }
 
   let chainOptions = [
-    { label: "Ethereum", value: 1 },
-    { label: "Polygon", value: 137 },
-    { label: "zkEVM", value: 1101 },
+    { label: "Ethereum", value: "1" },
+    { label: "Polygon", value: "137" },
+    { label: "zkEVM", value: "1101" },
   ];
 
-  // condition1 ? value1
-  //       : condition2 ? value2
-  //       : condition3 ? value3
-  //       : value4;
-  // validate contract address
   async function validateAddress(
     address: string,
-    chainId: number
+    chainId: string
   ): Promise<boolean> {
     const web3 = new Web3(
-      chainId === 1
+      chainId === "1"
         ? alchemy_api_key_urls.api_key_url_ethereum
-        : chainId === 137
+        : chainId === "137"
         ? alchemy_api_key_urls.api_key_url_polygon
         : alchemy_api_key_urls.api_key_url_zkevm
     );
@@ -262,19 +259,19 @@ export default function AppDetails({
   }
 
   async function validateAddresses(
-    addresses: { chain: number; address: string }[]
-  ): Promise<{ chain: number; address: string } | true> {
-    for (const { chain, address } of addresses) {
+    addresses: { chainId: string; address: string }[]
+  ): Promise<{ chainId: string; address: string } | true> {
+    for (const { chainId, address } of addresses) {
       const currFlatAddresses = address
         .split(",")
         .map((addressVal) => addressVal.trim());
       const chainResults = await Promise.all(
-        currFlatAddresses.map((addr) => validateAddress(addr, chain))
+        currFlatAddresses.map((addr) => validateAddress(addr, chainId))
       );
       for (let i = 0; i < chainResults.length; i++) {
         if (!chainResults[i]) {
           return {
-            chain: chain,
+            chainId: chainId,
             address: currFlatAddresses[i],
           };
         }
@@ -312,12 +309,11 @@ export default function AppDetails({
         }
         metadata.appUrl = appUrl;
 
-        //////////////////
         if (showCheckbox.isListedInRegistry) {
           if (!listDate && !metadata.listDate) {
             throw new Error("listdate is required");
           }
-          metadata.listDate = listDate?.toString();
+          metadata.listDate = listDate?.toISOString().slice(0, 10);
         }
         metadata.isListed = showCheckbox.isListedInRegistry;
 
@@ -329,7 +325,6 @@ export default function AppDetails({
             //metadata.walletApiVersion.push(walletApiVersion);
           }
         }
-        //////////////////////
 
         if (repoUrl) {
           metadata.repoUrl = repoUrl;
@@ -342,19 +337,23 @@ export default function AppDetails({
         if (chainIdArr.length <= 0) {
           throw new Error("Select Chain ID");
         }
-        metadata.chains = chainIdArr;
+        metadata.chains = chainIdArr.map((str) => parseInt(str));
+
+        if (metadata.contractAddress) {
+          delete metadata.contractAddress;
+        }
 
         if (contractArr) {
-          const contracts: { chain: number; address: string }[] =
+          const contracts: { chainId: string; address: string }[] =
             chainIdArr.reduce(
               (
-                acc: { chain: number; address: string }[],
-                chain: number,
+                acc: { chainId: string; address: string }[],
+                chain: string,
                 idx: number
               ) => {
                 if (contractArr[idx] && contractArr[idx].length > 0) {
                   acc.push({
-                    chain: chain,
+                    chainId: chain,
                     address: contractArr[idx],
                   });
                 }
@@ -367,11 +366,11 @@ export default function AppDetails({
           if (invalidAddress !== true) {
             throw new Error(
               `${invalidAddress.address} is not a valid address on ${
-                invalidAddress.chain === 1 ? "Ethereum" : "Polygon"
+                invalidAddress.chainId === "1" ? "Ethereum" : "Polygon"
               }`
             );
           }
-          metadata.contractAddress = contracts;
+          metadata.contracts = contracts;
         }
 
         metadata.allowedCountries = allowedCountries;
@@ -389,7 +388,18 @@ export default function AppDetails({
           throw new Error("Language is required");
         }
         metadata.language = language;
-        metadata.minAge = minimumAge;
+        if (metadata.minimumAge) {
+          delete metadata.minimumAge;
+        }
+
+        metadata.minAge = minimumAge === 0 ? 5 : minimumAge;
+
+        // is for mature audience
+        if (minimumAge >= 21) {
+          metadata.isForMatureAudience = true;
+        } else {
+          metadata.isForMatureAudience = false;
+        }
 
         if (!version && !metadata.version) {
           throw new Error("Version is required");
@@ -692,7 +702,6 @@ export default function AppDetails({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="0">Allow all age groups</SelectItem>
-                  <SelectItem value="3">3</SelectItem>
                   <SelectItem value="5">5</SelectItem>
                   <SelectItem value="13">13</SelectItem>
                   <SelectItem value="18">18</SelectItem>

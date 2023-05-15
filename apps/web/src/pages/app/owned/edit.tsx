@@ -13,12 +13,14 @@ import { env } from "@/env/schema.mjs";
 // TODO: refactor to reusable components
 export default function EditInfo({
   alchemy_api_key_urls,
+  biconomy_api_id_updateUri,
 }: {
   alchemy_api_key_urls: {
     api_key_url_ethereum: string;
     api_key_url_polygon: string;
     api_key_url_zkevm: string;
   };
+  biconomy_api_id_updateUri: string;
 }) {
   const router = useRouter();
   const { address } = useAccount();
@@ -85,6 +87,7 @@ export default function EditInfo({
               <AppEdit
                 appName={appName}
                 alchemy_api_key_urls={alchemy_api_key_urls}
+                biconomy_api_id_updateUri={biconomy_api_id_updateUri}
               />
             )}
 
@@ -107,6 +110,7 @@ export async function getServerSideProps() {
         api_key_url_polygon: env.ALCHEMY_API_KEY_URL_POLYGON,
         api_key_url_zkevm: env.ALCHEMY_API_KEY_URL_ZKEVM,
       },
+      biconomy_api_id_updateUri: env.BICONOMY_API_ID_UPDATE_URI,
     },
   };
 }

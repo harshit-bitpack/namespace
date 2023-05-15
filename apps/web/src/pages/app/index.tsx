@@ -17,8 +17,10 @@ import devABI from "../../config/devABI.json";
 
 export default function App({
   biconomy_api_key,
+  biconomy_api_id_safeMint,
 }: {
   biconomy_api_key: string;
+  biconomy_api_id_safeMint: string;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -109,7 +111,6 @@ export default function App({
             process.env.NEXT_PUBLIC_APP_CONTRACT_ADDRESS as string,
             appABI
           );
-          console.log(appContract);
           // const data = await appContract.call(
           //     "safeMintAppNFT",
           //     address,
@@ -121,10 +122,9 @@ export default function App({
           console.log("name : ", name);
           try {
             const tx = appContract.prepare("safeMintAppNFT", [address, name]);
-            console.log("transaction : ", tx);
             tx.setGaslessOptions({
               biconomy: {
-                apiId: "968f6012-b00c-4093-b39f-dcd3efe9fcb5",
+                apiId: biconomy_api_id_safeMint,
                 apiKey: biconomy_api_key,
                 deadlineSeconds: 100,
               },
@@ -274,11 +274,12 @@ export default function App({
 export async function getServerSideProps() {
   // Access environment variables
   const biconomy_api_key = env.BICONOMY_API_KEY;
-  console.log("api keys : ", biconomy_api_key);
+  const biconomy_api_id_safeMint = env.BICONOMY_API_ID_SAFE_MINT;
   // Pass environment variables as props
   return {
     props: {
       biconomy_api_key,
+      biconomy_api_id_safeMint,
     },
   };
 }
