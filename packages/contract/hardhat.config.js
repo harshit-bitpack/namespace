@@ -79,7 +79,7 @@ module.exports = {
       live: true,
       saveDeployments: true,
       tags: ["staging"],
-      gasPrice: 20000000000,
+      gasPrice: 1000000000,
       gasMultiplier: 2,
     },
     polygon: {
