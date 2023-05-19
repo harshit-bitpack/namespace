@@ -20,6 +20,7 @@ const server = z.object({
  * built with invalid env vars. To expose them to the client, prefix them with `NEXT_PUBLIC_`.
  */
 const client = z.object({
+    NEXT_PUBLIC_DAPPLIST_CONTRACT_ADDRESS: z.string(),
     NEXT_PUBLIC_APP_CONTRACT_ADDRESS: z.string(),
     NEXT_PUBLIC_DEV_CONTRACT_ADDRESS: z.string(),
 });
@@ -38,6 +39,7 @@ const processEnv = {
         process.env.NEXT_PUBLIC_APP_CONTRACT_ADDRESS,
     NEXT_PUBLIC_DEV_CONTRACT_ADDRESS:
         process.env.NEXT_PUBLIC_DEV_CONTRACT_ADDRESS,
+    NEXT_PUBLIC_DAPPLIST_CONTRACT_ADDRESS: process.env.NEXT_PUBLIC_DAPPLIST_CONTRACT_ADDRESS,
     BICONOMY_API_KEY: process.env.BICONOMY_API_KEY,
     ALCHEMY_API_KEY_URL_ETHEREUM: process.env.ALCHEMY_API_KEY_URL_ETHEREUM,
     ALCHEMY_API_KEY_URL_POLYGON: process.env.ALCHEMY_API_KEY_URL_POLYGON,
