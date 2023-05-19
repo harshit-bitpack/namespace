@@ -9,7 +9,7 @@ module.exports = {
 		return [
 			{
 				source: "/",
-				destination: "https://meroku-homepage.webflow.io/",
+				destination: "/app",
 			},
 		];
 	},
