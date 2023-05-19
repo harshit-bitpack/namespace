@@ -19,9 +19,13 @@ async function main() {
     };
     console.log("New transaction parameters:", txParams);
 
-    const signer = await ethers.getSigner(); // Replace with your preferred signer
-    const replacementTx = await signer.sendTransaction(txParams);
-    console.log("Replacement transaction sent:", replacementTx.hash);
+    try {
+      const signer = await ethers.getSigner(); // Replace with your preferred signer
+      const replacementTx = await signer.sendTransaction(txParams);
+      console.log("Replacement transaction sent:", replacementTx.hash);
+    } catch (e) {
+      console.log("Error in replace trx: ", e);
+    }
   } else {
     console.log("No pending transaction found to replace.");
   }
