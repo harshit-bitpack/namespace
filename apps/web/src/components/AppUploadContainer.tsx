@@ -7,6 +7,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Button,
 } from "ui";
 
 type AndroidState = {
@@ -37,6 +38,7 @@ const AppUploadContainer = ({
   platformState,
   handlePlatformStateChange,
   app,
+  handleDeleteFile,
 }: {
   platformState: any;
   handlePlatformStateChange: (
@@ -45,6 +47,7 @@ const AppUploadContainer = ({
     newState: AndroidState | IosState
   ) => void;
   app: string;
+  handleDeleteFile: (app: "android" | "ios", id: string) => void;
 }) => {
   return (
     <>
@@ -332,8 +335,15 @@ const AppUploadContainer = ({
           />
         </div>
       </div>
-
-      <hr className="my-4" />
+      <div className="w-full flex flex-row justify-end gap-x-4 mb-4">
+        <Button
+          onClick={() =>
+            handleDeleteFile(app as "android" | "ios", platformState.id)
+          }
+        >
+          Delete
+        </Button>
+      </div>
     </>
   );
 };

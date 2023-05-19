@@ -11,3 +11,4 @@ export * from "./Checkbox";
 export * from "./DatePicker";
 export * from "./Popover";
 export * from "./Calendar";
+export * from "./Card";

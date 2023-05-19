@@ -27,7 +27,7 @@ export default function EditInfo({
   const { isLoading, error, appNfts, devNfts } = useOwnedDomains();
 
   const appName = router.query.name as string;
-  if (!appName) return;
+  if (!appName) return <div>Not found.</div>;
   const ext = appName.split(".").pop();
 
   if (![...appNfts, ...devNfts].includes(appName) && !isLoading) {
@@ -40,7 +40,7 @@ export default function EditInfo({
       <Spacer />
 
       <div className="flex flex-col items-center justify-start max-w-[95%] md:max-w-[80%] lg:max-w-[50%] text-left md:text-center gap-y-4 md:gap-y-10 w-full min-h-[90vh] py-4">
-        <div className="flex flex-col items-start justify-center w-full gap-y-4">
+        <div className="flex flex-col items-center md:items-start justify-center w-full gap-y-4">
           <h1 className="font-bold text-4xl md:text-6xl">
             {ext === "dev" ? "Dev Details" : "App Details"}
           </h1>
@@ -69,19 +69,6 @@ export default function EditInfo({
         {/* && !isLoading */}
         {address && !isLoading && (
           <div className="flex flex-col w-full gap-y-3 text-left">
-            <div className="flex flex-row items-center justify-between w-full px-4 py-3 rounded-lg bg-white">
-              <div className="flex flex-row gap-x-2 items-center justify-center">
-                <CheckCircleIcon className="text-green-500" />
-                <p>{appName}</p>
-              </div>
-
-              {/* Registered On */}
-              <div className=""></div>
-
-              {/* Expires On */}
-              <div className=""></div>
-            </div>
-
             {/* .app nfts */}
             {ext === "app" && (
               <AppEdit

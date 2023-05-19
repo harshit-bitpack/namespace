@@ -26,7 +26,7 @@ export default function OwnedInfo() {
       <Spacer />
 
       <div className="flex flex-col items-center justify-start max-w-[95%] md:max-w-[80%] lg:max-w-[50%] text-left md:text-center gap-y-4 md:gap-y-10 w-full min-h-[90vh] py-4">
-        <div className="flex flex-col items-start justify-center w-full gap-y-4">
+        <div className="flex flex-col items-center md:items-start justify-center w-full gap-y-4">
           <h1 className="font-bold text-4xl md:text-6xl">
             {ext === "dev" ? "Dev Details" : "App Details"}
           </h1>
