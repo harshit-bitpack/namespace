@@ -114,7 +114,7 @@ export default function AppDetails({
   const [deniedCountries, setDeniedCountries] = useState<string[]>([]);
   const [language, setLanguage] = useState<string[]>([]);
   const [minimumAge, setMinimumAge] = useState<number>(0);
-  const [version, setVersion] = useState<string>();
+  // const [version, setVersion] = useState<string>();
 
   const [showCheckbox, setShowCheckbox] = useState<toggleDateAndWalletFileds>({
     hasWalletConnect: true,
@@ -211,9 +211,9 @@ export default function AppDetails({
       setMinimumAge(metadata.minAge);
     }
 
-    if (metadata.version) {
-      setVersion(metadata.version);
-    }
+    // if (metadata.version) {
+    //   setVersion(metadata.version);
+    // }
 
     if (metadata.tags) {
       setTags(metadata.tags.join(","));
@@ -425,10 +425,10 @@ export default function AppDetails({
           metadata.isForMatureAudience = false;
         }
 
-        if (!version && !metadata.version) {
-          throw new Error("Version is required");
-        }
-        metadata.version = version;
+        // if (!version && !metadata.version) {
+        //   throw new Error("Version is required");
+        // }
+        // metadata.version = version;
         if (tags) {
           metadata.tags = tags.split(/[, ]+/).map((tag) => tag.trim());
         }
@@ -753,7 +753,7 @@ export default function AppDetails({
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex flex-col gap-y-2">
+            {/* <div className="flex flex-col gap-y-2">
               <Label>
                 Version
                 <span className="text-red-500">*</span>
@@ -763,7 +763,7 @@ export default function AppDetails({
                 value={version}
                 onChange={(e) => setVersion(e.target.value)}
               />
-            </div>
+            </div> */}
             <div className="flex flex-col gap-y-2">
               <Label>Tags</Label>
               <Textarea

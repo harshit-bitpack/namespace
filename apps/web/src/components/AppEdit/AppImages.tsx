@@ -212,7 +212,8 @@ export default function AppImages({
         return screenshot.url as string;
       });
       const screenshotsUrl = await Promise.all(uploadPromises);
-      metaData["images"]["screenshots"] = screenshotsUrl;
+      metaData["images"]["screenshots"] =
+        screenshotsUrl.length > 0 ? screenshotsUrl : undefined;
       try {
         const validator = new AppDataValidator();
         const [valid, errors] = validator.validate(metaData);

@@ -1,20 +1,24 @@
 import Divider from "../Divider";
 import Image from "next/image";
+import screenShotPlaceHolder from "@/public/MobileScreen.png";
 
 export default function AppInfo({ metaData }: { metaData: any }) {
   console.log("metaData : ", metaData);
   const polygonChainContracts: string[] = [];
   const ethChainContracts: string[] = [];
-  if (metaData.contractAddress) {
-    metaData.contractAddress.forEach(
-      (contract: { chain: number; address: string }) => {
+  const zkevmChainContracts: string[] = [];
+  if (metaData.contracts) {
+    metaData.contracts.forEach(
+      (contract: { chainId: string; address: string }) => {
         const addresses = contract.address
           .split(/[, ]+/)
           .map((address) => address.trim());
-        if (contract.chain === 137) {
+        if (contract.chainId === "137") {
           polygonChainContracts.push(...addresses);
-        } else if (contract.chain === 1) {
+        } else if (contract.chainId === "1") {
           ethChainContracts.push(...addresses);
+        } else if (contract.chainId === "1101") {
+          zkevmChainContracts.push(...addresses);
         }
       }
     );
@@ -130,16 +134,16 @@ export default function AppInfo({ metaData }: { metaData: any }) {
         <div className="flex flex-col gap-y-1">
           <p className="text-[#667085] font-medium text-[16px]">Minimum Age</p>
           <p className="text-[#344054] font-semibold text-[16px]">
-            {metaData.minimumAge ?? 18}
+            {metaData.minAge ?? 18}
           </p>
         </div>
 
-        <div className="flex flex-col gap-y-1">
+        {/* <div className="flex flex-col gap-y-1">
           <p className="text-[#667085] font-medium text-[16px]">Version</p>
           <p className="text-[#344054] font-semibold text-[16px]">
             {metaData.version ?? 2.34}
           </p>
-        </div>
+        </div> */}
 
         <div className="flex flex-col gap-y-1">
           <p className="text-[#667085] font-medium text-[16px]">App Listed?</p>
@@ -219,7 +223,7 @@ export default function AppInfo({ metaData }: { metaData: any }) {
         </div>
       </div>
 
-      {metaData.contractAddress ? (
+      {metaData.contracts ? (
         <>
           <div className="flex flex-col gap-y-2 w-full">
             <h3 className="text-[#101828] text-lg font-semibold">Contracts</h3>
@@ -258,6 +262,28 @@ export default function AppInfo({ metaData }: { metaData: any }) {
                   </p>
                   <div className="flex flex-row flex-wrap gap-x-1 gap-y-1">
                     {ethChainContracts.map((address: string, idx: number) => (
+                      <span
+                        key={idx}
+                        className="text-[#363F72] rounded-lg bg-[#F8F9FC] py-[2px] px-2 font-medium text-[12px]"
+                      >
+                        {address}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <></>
+            )}
+
+            {zkevmChainContracts.length > 0 ? (
+              <>
+                <div className="flex flex-col gap-y-1">
+                  <p className="text-[#667085] font-medium text-[16px]">
+                    zkEVM
+                  </p>
+                  <div className="flex flex-row flex-wrap gap-x-1 gap-y-1">
+                    {zkevmChainContracts.map((address: string, idx: number) => (
                       <span
                         key={idx}
                         className="text-[#363F72] rounded-lg bg-[#F8F9FC] py-[2px] px-2 font-medium text-[12px]"
@@ -491,28 +517,28 @@ export default function AppInfo({ metaData }: { metaData: any }) {
         ) : (
           <>
             <Image
-              src={"https://picsum.photos/157/323"}
+              src={screenShotPlaceHolder}
               alt="App Screenshot"
               width={157}
               height={323}
               className="rounded-lg border-4 border-white"
             />
             <Image
-              src={"https://picsum.photos/157/323"}
+              src={screenShotPlaceHolder}
               alt="App Screenshot"
               width={157}
               height={323}
               className="rounded-lg border-4 border-white"
             />
             <Image
-              src={"https://picsum.photos/157/323"}
+              src={screenShotPlaceHolder}
               alt="App Screenshot"
               width={157}
               height={323}
               className="rounded-lg border-4 border-white"
             />
             <Image
-              src={"https://picsum.photos/157/323"}
+              src={screenShotPlaceHolder}
               alt="App Screenshot"
               width={157}
               height={323}
